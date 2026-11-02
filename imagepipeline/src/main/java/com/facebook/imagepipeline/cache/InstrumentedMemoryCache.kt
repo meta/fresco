@@ -40,11 +40,6 @@ class InstrumentedMemoryCache<K, V>(
     return mDelegate.cache(key, value)
   }
 
-  override fun cacheOnRelease(key: K, value: CloseableReference<V>): CloseableReference<V>? {
-    mTracker.onCachePut(key)
-    return mDelegate.cacheOnRelease(key, value)
-  }
-
   override fun removeAll(predicate: Predicate<K>): Int {
     return mDelegate.removeAll(predicate)
   }

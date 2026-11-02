@@ -1180,7 +1180,7 @@ class ImagePipeline(
     val image = imageReference.get()
     if (image.isStateful) return
     if (!image.qualityInfo.isOfFullQuality) return
-    CloseableReference.closeSafely(bitmapMemoryCache.cacheOnRelease(cacheKey, imageReference))
+    CloseableReference.closeSafely(bitmapMemoryCache.cache(cacheKey, imageReference))
   }
 
   fun hasCachedImage(cacheKey: CacheKey?): Boolean {
