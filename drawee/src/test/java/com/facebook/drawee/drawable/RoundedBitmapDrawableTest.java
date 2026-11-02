@@ -21,8 +21,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.GraphicsMode;
 
 @RunWith(RobolectricTestRunner.class)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 public class RoundedBitmapDrawableTest {
   private Resources mResources;
   private Bitmap mBitmap;
