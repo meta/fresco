@@ -15,8 +15,6 @@ import android.graphics.Paint
 import android.graphics.Shader
 import com.facebook.fresco.vito.renderer.util.ColorUtils
 
-typealias RenderCommand = (Canvas) -> Unit
-
 object ImageRenderer {
 
   var optimizeAlphaHandling: Boolean = false
@@ -32,7 +30,7 @@ object ImageRenderer {
       shape: Shape,
       paint: Paint,
       imageTransformation: Matrix? = null,
-  ): RenderCommand {
+  ): (Canvas) -> Unit {
     return when (model) {
       is BitmapImageDataModel -> model.createRenderCommand(shape, paint, imageTransformation)
       is ColorIntImageDataModel -> model.createRenderCommand(shape, paint)
@@ -44,7 +42,7 @@ object ImageRenderer {
       shape: Shape,
       paint: Paint,
       imageTransformation: Matrix? = null,
-  ): RenderCommand =
+  ): (Canvas) -> Unit =
       when (shape) {
         is RectShape -> bitmapRenderCommand(paint, bitmap, imageTransformation)
         is CircleShape ->
@@ -58,7 +56,7 @@ object ImageRenderer {
         }
       }
 
-  fun ColorIntImageDataModel.createRenderCommand(shape: Shape, paint: Paint): RenderCommand {
+  fun ColorIntImageDataModel.createRenderCommand(shape: Shape, paint: Paint): (Canvas) -> Unit {
     // The image transformation is a no-op for solid colors since it remains a solid color
     paint.color = ColorUtils.multiplyColorAlpha(colorInt, paint.alpha)
     return paintRenderCommand(shape, paint)
@@ -68,7 +66,7 @@ object ImageRenderer {
       shape: Shape,
       paint: Paint,
       imageTransformation: Matrix? = null,
-  ): RenderCommand {
+  ): (Canvas) -> Unit {
     // We transform by scaling the Canvas, so we let the Drawable draw itself with its
     // preferred dimensions
     when (shape) {
@@ -117,12 +115,12 @@ object ImageRenderer {
       paint: Paint,
       bitmap: Bitmap,
       imageTransformation: Matrix?,
-  ): RenderCommand = { canvas ->
+  ): (Canvas) -> Unit = { canvas ->
     canvas.concat(imageTransformation)
     canvas.drawBitmap(bitmap, 0f, 0f, paint)
   }
 
-  fun paintRenderCommand(shape: Shape, paint: Paint): RenderCommand = { canvas ->
+  fun paintRenderCommand(shape: Shape, paint: Paint): (Canvas) -> Unit = { canvas ->
     shape.draw(canvas, paint)
   }
 

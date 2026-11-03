@@ -21,7 +21,6 @@ import com.facebook.fresco.vito.renderer.BitmapImageDataModel
 import com.facebook.fresco.vito.renderer.CanvasTransformation
 import com.facebook.fresco.vito.renderer.CanvasTransformationHandler
 import com.facebook.fresco.vito.renderer.ImageDataModel
-import com.facebook.fresco.vito.renderer.RenderCommand
 
 class ImageLayerDataModel(
     var drawableCallbackProvider: (() -> Drawable.Callback?)? = null,
@@ -37,7 +36,7 @@ class ImageLayerDataModel(
   val canvasTransformationHandler: CanvasTransformationHandler = CanvasTransformationHandler(null)
   private val paint: Paint = Paint()
 
-  private var renderCommand: RenderCommand? = null
+  private var renderCommand: ((Canvas) -> Unit)? = null
   private var colorFilter: ColorFilter? = null
 
   private var fadeAnimator: ValueAnimator? = null
