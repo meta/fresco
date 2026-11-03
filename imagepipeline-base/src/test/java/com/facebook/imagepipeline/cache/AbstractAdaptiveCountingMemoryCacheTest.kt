@@ -19,7 +19,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.Mock
@@ -30,6 +29,7 @@ import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.anyOrNull
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -187,7 +187,7 @@ class AbstractAdaptiveCountingMemoryCacheTest {
             initialLFUCacheFractionPromil,
         )
     cache.cache(KEY, newReference(100), entryStateObserver)
-    verify(entryStateObserver, never()).onExclusivityChanged(any<String>(), anyBoolean())
+    verify(entryStateObserver, never()).onExclusivityChanged(anyOrNull<String>(), anyBoolean())
   }
 
   @Test
@@ -228,7 +228,7 @@ class AbstractAdaptiveCountingMemoryCacheTest {
     assertThat(reusedRef).isNull()
     assertTotalSize(1, 100)
     assertExclusivelyOwnedSize(0, 0)
-    verify(entryStateObserver, never()).onExclusivityChanged(any<String>(), anyBoolean())
+    verify(entryStateObserver, never()).onExclusivityChanged(anyOrNull<String>(), anyBoolean())
     cachedRef?.close()
   }
 

@@ -382,12 +382,14 @@ open class LruCountingMemoryCache<K : Any, V : Any>(
         checkNotNull(memoryCacheParamsSupplier.get()) { "mMemoryCacheParamsSupplier returned null" }
   }
 
-  override fun getMemoryCacheParams(): MemoryCacheParams = mMemoryCacheParams
+  override val memoryCacheParams: MemoryCacheParams
+    get() = mMemoryCacheParams
 
-  override fun getCachedEntries(): CountingLruMap<K, CountingMemoryCache.Entry<K, V>>? =
-      mCachedEntries
+  override val cachedEntries: CountingLruMap<K, CountingMemoryCache.Entry<K, V>>?
+    get() = mCachedEntries
 
-  override fun getOtherEntries(): Map<Bitmap, Any>? = mOtherEntries
+  override val otherEntries: Map<Bitmap, Any>?
+    get() = mOtherEntries
 
   /**
    * Removes the exclusively owned items until the cache constraints are met.
@@ -535,16 +537,20 @@ open class LruCountingMemoryCache<K : Any, V : Any>(
     /** Gets the number of the cached items that are used by at least one client. */
     get() = mCachedEntries.count - mExclusiveEntries.count
 
-  /** Gets the total size in bytes of the cached items that are used by at least one client. */
-  @Synchronized
-  override fun getInUseSizeInBytes(): Int =
-      mCachedEntries.sizeInBytes - mExclusiveEntries.sizeInBytes
+  @get:Synchronized
+  override val inUseSizeInBytes: Int
+    /** Gets the total size in bytes of the cached items that are used by at least one client. */
+    get() = mCachedEntries.sizeInBytes - mExclusiveEntries.sizeInBytes
 
-  /** Gets the number of the exclusively owned items. */
-  @Synchronized override fun getEvictionQueueCount(): Int = mExclusiveEntries.count
+  @get:Synchronized
+  override val evictionQueueCount: Int
+    /** Gets the number of the exclusively owned items. */
+    get() = mExclusiveEntries.count
 
-  /** Gets the total size in bytes of the exclusively owned items. */
-  @Synchronized override fun getEvictionQueueSizeInBytes(): Int = mExclusiveEntries.sizeInBytes
+  @get:Synchronized
+  override val evictionQueueSizeInBytes: Int
+    /** Gets the total size in bytes of the exclusively owned items. */
+    get() = mExclusiveEntries.sizeInBytes
 
   @get:Synchronized
   override val debugData: String?
