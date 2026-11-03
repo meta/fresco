@@ -20,7 +20,9 @@ import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import com.facebook.common.internal.Suppliers;
 import javax.annotation.Nullable;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,8 +38,14 @@ public class ScaleTypeDrawableTest {
 
   @Before
   public void setUp() {
+    ScaleTypeDrawable.fixStatefulScaleTypeExactSizeBounds = Suppliers.BOOLEAN_FALSE;
     mScaleTypeDrawable = new ScaleTypeDrawable(mUnderlyingDrawable, ScaleType.CENTER);
     mScaleTypeDrawable.setCallback(mCallback);
+  }
+
+  @After
+  public void tearDown() {
+    ScaleTypeDrawable.fixStatefulScaleTypeExactSizeBounds = Suppliers.BOOLEAN_FALSE;
   }
 
   @Test
@@ -115,6 +123,37 @@ public class ScaleTypeDrawableTest {
     verify(mUnderlyingDrawable).setBounds(viewBounds);
     assertThat(mScaleTypeDrawable.mDrawMatrix).isNull();
     verifyNoMoreInteractions(mUnderlyingDrawable);
+  }
+
+  @Test
+  public void testConfigureBounds_SameAsView_StatefulScaleTypeUsesFastPathWhenFixDisabled() {
+    TestStatefulScaleType scaleType = new TestStatefulScaleType();
+    when(mUnderlyingDrawable.getIntrinsicWidth()).thenReturn(mViewBounds.width());
+    when(mUnderlyingDrawable.getIntrinsicHeight()).thenReturn(mViewBounds.height());
+
+    mScaleTypeDrawable.setScaleType(scaleType);
+    mScaleTypeDrawable.setBounds(mViewBounds);
+
+    assertThat(scaleType.mParentBounds.isEmpty()).isTrue();
+    assertThat(scaleType.mTransformCallCount).isEqualTo(1);
+    assertThat(mScaleTypeDrawable.mDrawMatrix).isNull();
+  }
+
+  @Test
+  public void testConfigureBounds_SameAsView_StatefulScaleTypeReceivesBoundsWhenFixEnabled() {
+    TestStatefulScaleType scaleType = new TestStatefulScaleType();
+    when(mUnderlyingDrawable.getIntrinsicWidth()).thenReturn(mViewBounds.width());
+    when(mUnderlyingDrawable.getIntrinsicHeight()).thenReturn(mViewBounds.height());
+    ScaleTypeDrawable.fixStatefulScaleTypeExactSizeBounds = Suppliers.BOOLEAN_TRUE;
+
+    mScaleTypeDrawable.setScaleType(scaleType);
+    assertThat(scaleType.mParentBounds.isEmpty()).isTrue();
+
+    mScaleTypeDrawable.setBounds(mViewBounds);
+
+    assertThat(scaleType.mParentBounds).isEqualTo(mViewBounds);
+    assertThat(scaleType.mTransformCallCount).isEqualTo(2);
+    assertThat(mScaleTypeDrawable.mDrawMatrix).isNotNull();
   }
 
   @Test
@@ -307,5 +346,34 @@ public class ScaleTypeDrawableTest {
     // RectF actualImageBounds = new RectF();
     // mScaleTypeDrawable.getTransformedBounds(actualImageBounds);
     // Assert.assertEquals(expectedActualImageBounds, actualImageBounds);
+  }
+
+  private static class TestStatefulScaleType implements ScaleType, ScalingUtils.StatefulScaleType {
+    private final Rect mParentBounds = new Rect();
+    private int mTransformCallCount;
+
+    @Override
+    public Matrix getTransform(
+        Matrix outTransform,
+        Rect parentBounds,
+        int childWidth,
+        int childHeight,
+        float focusX,
+        float focusY) {
+      mTransformCallCount++;
+      mParentBounds.set(parentBounds);
+      return ScaleType.FIT_XY.getTransform(
+          outTransform, parentBounds, childWidth, childHeight, focusX, focusY);
+    }
+
+    @Override
+    public String getDescription() {
+      return "test_stateful";
+    }
+
+    @Override
+    public Object getState() {
+      return "state";
+    }
   }
 }
