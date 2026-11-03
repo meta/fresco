@@ -10,7 +10,6 @@ package com.facebook.fresco.vito.core
 import android.content.res.Resources
 import com.facebook.cache.common.CacheKey
 import com.facebook.common.internal.Objects
-import com.facebook.fresco.middleware.Extras
 import com.facebook.fresco.middleware.HasExtraData
 import com.facebook.fresco.urimod.Dimensions
 import com.facebook.fresco.vito.options.ImageOptions
@@ -42,9 +41,9 @@ class VitoImageRequest(
 
   override fun <E> getExtra(key: String, valueIfNotFound: E?): E? = getExtra(key) ?: valueIfNotFound
 
-  override fun getExtras(): Extras = extras
+  override fun getExtras(): Map<String, Any> = extras
 
-  override fun putExtras(extras: Extras) = extras.forEach { putExtra(it.key, it.value) }
+  override fun putExtras(extras: Map<String, Any>) = extras.forEach { putExtra(it.key, it.value) }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) {
