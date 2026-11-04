@@ -119,8 +119,11 @@ object ImageSourceProvider {
    * Create a Smart Fetch image source for a given image URI.
    *
    * A null URI gives the same empty image source as [forUri]. An empty URI also gives that empty
-   * image source when [treatEmptyUriAsImageSource] is true. Every other URI gives a
-   * [SmartImageSource].
+   * image source when [treatEmptyUriAsImageSource] is true. A `res:` URI with a valid resource ID
+   * gives the same [DrawableResImageSource] as [forUri] when [shortcutResUris] is true: Smart Fetch
+   * cannot resize a local resource. A `res:` URI without a valid resource ID gives a
+   * [SmartImageSource], so its request fails in the image pipeline instead of throwing. Every other
+   * URI gives a [SmartImageSource].
    *
    * @param uri the image URI to use
    * @param smartFetchOptIn the Smart Fetch behavior to request
@@ -141,7 +144,8 @@ object ImageSourceProvider {
       } else if (treatEmptyUriAsImageSource && uri.toString().isEmpty()) {
         emptyUriImageSource
       } else {
-        SmartImageSource(uri, sizingHint, extras, smartFetchOptIn)
+        shortcutResId(uri)?.let { DrawableResImageSource(it) }
+            ?: SmartImageSource(uri, sizingHint, extras, smartFetchOptIn)
       }
 
   /**
@@ -163,6 +167,17 @@ object ImageSourceProvider {
       extras: Map<String, Any>? = null,
   ): ImageSource =
       smartForUri(uriString?.let { uriParser(it) }, smartFetchOptIn, sizingHint, extras)
+
+  /**
+   * The resource ID of a `res:` URI that [smartForUri] draws without an image request, or null when
+   * [shortcutResUris] is false or the URI has no valid nonzero resource ID.
+   */
+  private fun shortcutResId(uri: Uri): Int? =
+      if (shortcutResUris && uri.scheme == "res") {
+        uri.lastPathSegment?.toIntOrNull()?.takeIf { it != 0 }
+      } else {
+        null
+      }
 
   /**
    * Create a multi image source for a given set of sources. Image sources are obtained in order.

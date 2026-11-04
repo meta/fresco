@@ -9,6 +9,7 @@ package com.facebook.fresco.vito.core.impl
 
 import android.net.Uri
 import com.facebook.drawee.drawable.SizingHint
+import com.facebook.fresco.vito.source.DrawableResImageSource
 import com.facebook.fresco.vito.source.EmptyImageSource
 import com.facebook.fresco.vito.source.ImageSourceProvider
 import com.facebook.fresco.vito.source.SmartFetchOptIn
@@ -25,17 +26,20 @@ class ImageSourceProviderSmartForUriTest {
 
   private lateinit var originalUriParser: (String) -> Uri?
   private var originalTreatEmptyUriAsImageSource = false
+  private var originalShortcutResUris = false
 
   @Before
   fun setup() {
     originalUriParser = ImageSourceProvider.uriParser
     originalTreatEmptyUriAsImageSource = ImageSourceProvider.treatEmptyUriAsImageSource
+    originalShortcutResUris = ImageSourceProvider.shortcutResUris
   }
 
   @After
   fun tearDown() {
     ImageSourceProvider.uriParser = originalUriParser
     ImageSourceProvider.treatEmptyUriAsImageSource = originalTreatEmptyUriAsImageSource
+    ImageSourceProvider.shortcutResUris = originalShortcutResUris
   }
 
   @Test
@@ -113,7 +117,60 @@ class ImageSourceProviderSmartForUriTest {
         .isSameAs(ImageSourceProvider.forUri(IMAGE_URL))
   }
 
+  @Test
+  fun testSmartForUri_whenResUriAndShortcutResUris_thenSameDrawableResImageSourceAsForUri() {
+    ImageSourceProvider.shortcutResUris = true
+
+    assertThat(
+        ImageSourceProvider.smartForUri(Uri.parse(RES_URL), SmartFetchOptIn.ENABLED_NO_FALLBACK),
+    )
+        .isEqualTo(DrawableResImageSource(RES_ID))
+        .isEqualTo(ImageSourceProvider.forUri(Uri.parse(RES_URL)))
+    assertThat(ImageSourceProvider.smartForUri(RES_URL, SmartFetchOptIn.ENABLED_NO_FALLBACK))
+        .isEqualTo(ImageSourceProvider.forUri(RES_URL))
+  }
+
+  @Test
+  fun testSmartForUri_whenResUriHasNoValidIdAndShortcutResUris_thenSmartImageSource() {
+    ImageSourceProvider.shortcutResUris = true
+
+    for (url in listOf("res:///drawable/icon", "res:/", "res:/0")) {
+      assertThat(
+          ImageSourceProvider.smartForUri(Uri.parse(url), SmartFetchOptIn.ENABLED_NO_FALLBACK),
+      )
+          .isEqualTo(
+              SmartImageSource(
+                  Uri.parse(url),
+                  SizingHint.DEFAULT,
+                  null,
+                  SmartFetchOptIn.ENABLED_NO_FALLBACK,
+              ),
+          )
+    }
+  }
+
+  @Test
+  fun testSmartForUri_whenResUriAndNoShortcutResUris_thenSmartImageSource() {
+    ImageSourceProvider.shortcutResUris = false
+
+    assertThat(ImageSourceProvider.forUri(Uri.parse(RES_URL)))
+        .isNotInstanceOf(DrawableResImageSource::class.java)
+    assertThat(
+        ImageSourceProvider.smartForUri(Uri.parse(RES_URL), SmartFetchOptIn.ENABLED_NO_FALLBACK),
+    )
+        .isEqualTo(
+            SmartImageSource(
+                Uri.parse(RES_URL),
+                SizingHint.DEFAULT,
+                null,
+                SmartFetchOptIn.ENABLED_NO_FALLBACK,
+            ),
+        )
+  }
+
   private companion object {
+    const val RES_ID = 2131230720
+    const val RES_URL = "res:/$RES_ID"
     const val IMAGE_URL = "https://scontent.xx.fbcdn.net/v/t39.30808-6/1_2_3_n.jpg?ctp=s160x160"
     val EXTRAS: Map<String, Any> = mapOf("key" to "value")
   }
