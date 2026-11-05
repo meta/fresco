@@ -57,6 +57,7 @@ object ImageSourceProvider {
   private val emptyImageSource = EmptyImageSource("emptySource()")
   private val nullUriImageSource = EmptyImageSource("forUri(null)")
   private val emptyUriImageSource = EmptyImageSource("forUri(empty)")
+  private val invalidResUriImageSource = EmptyImageSource("smartForUri(invalid res uri)")
 
   /** @return an empty image source if no image URI is available to pass to the UI component */
   @JvmStatic fun emptySource(): ImageSource = emptyImageSource
@@ -80,15 +81,7 @@ object ImageSourceProvider {
         val resId = uri.lastPathSegment?.toInt() ?: 0
         DrawableResImageSource(resId)
       } else {
-        SingleImageSourceImpl(
-            uri,
-            buildMap {
-              if (extras != null) {
-                putAll(extras)
-              }
-              put(HasExtraData.KEY_URI_SOURCE, uri)
-            },
-        )
+        singleImageSource(uri, extras)
       }
 
   /**
@@ -119,11 +112,17 @@ object ImageSourceProvider {
    * Create a Smart Fetch image source for a given image URI.
    *
    * A null URI gives the same empty image source as [forUri]. An empty URI also gives that empty
-   * image source when [treatEmptyUriAsImageSource] is true. A `res:` URI with a valid resource ID
-   * gives the same [DrawableResImageSource] as [forUri] when [shortcutResUris] is true: Smart Fetch
-   * cannot resize a local resource. A `res:` URI without a valid resource ID gives a
-   * [SmartImageSource], so its request fails in the image pipeline instead of throwing. Every other
-   * URI gives a [SmartImageSource].
+   * image source when [treatEmptyUriAsImageSource] is true.
+   *
+   * Smart Fetch cannot resize a local resource, so a `res:` URI gets the source of [forUri]: a
+   * [DrawableResImageSource] when [shortcutResUris] is true, else a plain URI source.
+   * [smartFetchOptIn] and [sizingHint] do not apply to it. Where the source of [forUri] throws
+   * instead of loading, this method gives an empty image source: when the resource ID in the URI is
+   * not an integer, or, when [shortcutResUris] is true, when it cannot be a resource ID. A resource
+   * ID that the app does not have, or that is not a drawable, throws when the image mounts, as with
+   * [forUri].
+   *
+   * Every other URI gives a [SmartImageSource].
    *
    * @param uri the image URI to use
    * @param smartFetchOptIn the Smart Fetch behavior to request
@@ -143,14 +142,15 @@ object ImageSourceProvider {
         nullUriImageSource
       } else if (treatEmptyUriAsImageSource && uri.toString().isEmpty()) {
         emptyUriImageSource
+      } else if (uri.scheme == "res") {
+        resImageSource(uri, extras)
       } else {
-        shortcutResId(uri)?.let { DrawableResImageSource(it) }
-            ?: SmartImageSource(uri, sizingHint, extras, smartFetchOptIn)
+        SmartImageSource(uri, sizingHint, extras, smartFetchOptIn)
       }
 
   /**
    * Create a Smart Fetch image source for a given image URI String. [uriParser] parses the String,
-   * as in [forUri].
+   * as in [forUri]. When [uriParser] throws for the String, this method throws the same exception.
    *
    * @param uriString the image URI String to use
    * @param smartFetchOptIn the Smart Fetch behavior to request
@@ -168,16 +168,38 @@ object ImageSourceProvider {
   ): ImageSource =
       smartForUri(uriString?.let { uriParser(it) }, smartFetchOptIn, sizingHint, extras)
 
-  /**
-   * The resource ID of a `res:` URI that [smartForUri] draws without an image request, or null when
-   * [shortcutResUris] is false or the URI has no valid nonzero resource ID.
-   */
-  private fun shortcutResId(uri: Uri): Int? =
-      if (shortcutResUris && uri.scheme == "res") {
-        uri.lastPathSegment?.toIntOrNull()?.takeIf { it != 0 }
+  /** The [smartForUri] image source for a `res:` URI. */
+  private fun resImageSource(uri: Uri, extras: Map<String, Any>?): ImageSource =
+      if (shortcutResUris) {
+        // forUri reads the resource ID from the last path segment.
+        val id = uri.lastPathSegment?.toIntOrNull()
+        if (id != null && isResourceId(id)) DrawableResImageSource(id) else invalidResUriImageSource
       } else {
-        null
+        // ImageRequestBuilder.validate throws unless the path after its first character is an
+        // integer.
+        val path = uri.path
+        if (!path.isNullOrEmpty() && path.substring(1).toIntOrNull() != null) {
+          singleImageSource(uri, extras)
+        } else {
+          invalidResUriImageSource
+        }
       }
+
+  /** A resource ID has the form 0xPPTTEEEE, with a nonzero package byte PP and type byte TT. */
+  private fun isResourceId(id: Int): Boolean = (id ushr 24) != 0 && ((id ushr 16) and 0xff) != 0
+
+  private fun singleImageSource(
+      uri: Uri,
+      extras: Map<String, Any>?,
+  ): ImageSource = SingleImageSourceImpl(
+      uri,
+      buildMap {
+        if (extras != null) {
+          putAll(extras)
+        }
+        put(HasExtraData.KEY_URI_SOURCE, uri)
+      },
+  )
 
   /**
    * Create a multi image source for a given set of sources. Image sources are obtained in order.

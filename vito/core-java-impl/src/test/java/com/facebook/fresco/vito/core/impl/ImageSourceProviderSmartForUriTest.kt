@@ -14,7 +14,9 @@ import com.facebook.fresco.vito.source.EmptyImageSource
 import com.facebook.fresco.vito.source.ImageSourceProvider
 import com.facebook.fresco.vito.source.SmartFetchOptIn
 import com.facebook.fresco.vito.source.SmartImageSource
+import com.facebook.imagepipeline.request.ImageRequestBuilder
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -131,46 +133,106 @@ class ImageSourceProviderSmartForUriTest {
   }
 
   @Test
-  fun testSmartForUri_whenResUriHasNoValidIdAndShortcutResUris_thenSmartImageSource() {
+  fun testSmartForUri_whenIdIsLastOfSeveralSegmentsAndShortcutResUris_thenSameSourceAsForUri() {
     ImageSourceProvider.shortcutResUris = true
 
-    for (url in listOf("res:///drawable/icon", "res:/", "res:/0")) {
-      assertThat(
-          ImageSourceProvider.smartForUri(Uri.parse(url), SmartFetchOptIn.ENABLED_NO_FALLBACK),
-      )
-          .isEqualTo(
-              SmartImageSource(
-                  Uri.parse(url),
-                  SizingHint.DEFAULT,
-                  null,
-                  SmartFetchOptIn.ENABLED_NO_FALLBACK,
-              ),
-          )
+    for (url in listOf("res:/drawable/$RES_ID", "res:/$RES_ID/")) {
+      val uri = Uri.parse(url)
+      assertThat(ImageSourceProvider.smartForUri(uri, SmartFetchOptIn.ENABLED_NO_FALLBACK))
+          .isEqualTo(DrawableResImageSource(RES_ID))
+          .isEqualTo(ImageSourceProvider.forUri(uri))
     }
   }
 
   @Test
-  fun testSmartForUri_whenResUriAndNoShortcutResUris_thenSmartImageSource() {
+  fun testSmartForUri_whenBackslashBeforeIdAndShortcutResUris_thenEmptySource() {
+    ImageSourceProvider.shortcutResUris = true
+
+    assertThat(
+        ImageSourceProvider.smartForUri(
+            Uri.parse("res://host\\$RES_ID"),
+            SmartFetchOptIn.ENABLED_NO_FALLBACK,
+        ),
+    )
+        .isInstanceOf(EmptyImageSource::class.java)
+  }
+
+  @Test
+  fun testSmartForUri_whenResUriPathIsNotAnInteger_thenEmptySourceForBothShortcutSettings() {
+    for (shortcut in listOf(true, false)) {
+      ImageSourceProvider.shortcutResUris = shortcut
+      for (url in INVALID_RES_URLS) {
+        assertThat(
+            ImageSourceProvider.smartForUri(Uri.parse(url), SmartFetchOptIn.ENABLED_NO_FALLBACK),
+        )
+            .isInstanceOf(EmptyImageSource::class.java)
+        assertThat(ImageSourceProvider.smartForUri(url, SmartFetchOptIn.ENABLED_NO_FALLBACK))
+            .isInstanceOf(EmptyImageSource::class.java)
+      }
+    }
+  }
+
+  @Test
+  fun testSmartForUri_whenResUriPathIsNotAnInteger_thenImageRequestBuilderThrows() {
+    for (url in INVALID_RES_URLS) {
+      // BuilderException for a hierarchical URI; NullPointerException for the opaque "res:123".
+      assertThatThrownBy { ImageRequestBuilder.newBuilderWithSource(Uri.parse(url)).build() }
+          .isInstanceOf(RuntimeException::class.java)
+    }
+  }
+
+  @Test
+  fun testSmartForUri_whenNotAResourceIdAndShortcutResUris_thenEmptySource() {
+    ImageSourceProvider.shortcutResUris = true
+
+    for (url in NOT_RESOURCE_ID_RES_URLS) {
+      assertThat(
+          ImageSourceProvider.smartForUri(Uri.parse(url), SmartFetchOptIn.ENABLED_NO_FALLBACK),
+      )
+          .isInstanceOf(EmptyImageSource::class.java)
+      assertThat(ImageSourceProvider.smartForUri(url, SmartFetchOptIn.ENABLED_NO_FALLBACK))
+          .isInstanceOf(EmptyImageSource::class.java)
+    }
+  }
+
+  @Test
+  fun testSmartForUri_whenNegativeResourceIdAndShortcutResUris_thenSameDrawableResImageSourceAsForUri() {
+    ImageSourceProvider.shortcutResUris = true
+    val uri = Uri.parse("res:/$NEGATIVE_RES_ID")
+
+    assertThat(ImageSourceProvider.smartForUri(uri, SmartFetchOptIn.ENABLED_NO_FALLBACK))
+        .isEqualTo(DrawableResImageSource(NEGATIVE_RES_ID))
+        .isEqualTo(ImageSourceProvider.forUri(uri))
+  }
+
+  @Test
+  fun testSmartForUri_whenResUriAndNoShortcutResUris_thenSameSourceAsForUri() {
     ImageSourceProvider.shortcutResUris = false
 
-    assertThat(ImageSourceProvider.forUri(Uri.parse(RES_URL)))
-        .isNotInstanceOf(DrawableResImageSource::class.java)
-    assertThat(
-        ImageSourceProvider.smartForUri(Uri.parse(RES_URL), SmartFetchOptIn.ENABLED_NO_FALLBACK),
-    )
-        .isEqualTo(
-            SmartImageSource(
-                Uri.parse(RES_URL),
-                SizingHint.DEFAULT,
-                null,
-                SmartFetchOptIn.ENABLED_NO_FALLBACK,
-            ),
-        )
+    for (url in listOf(RES_URL, "res:/0", "res:/$RES_ID?cstp=mx800x800&ctp=s800x800")) {
+      val uri = Uri.parse(url)
+      assertThat(
+          ImageSourceProvider.smartForUri(
+              uri,
+              SmartFetchOptIn.ENABLED_NO_FALLBACK,
+              SizingHint.DEFAULT,
+              EXTRAS,
+          ),
+      )
+          .isNotInstanceOf(SmartImageSource::class.java)
+          .isEqualTo(ImageSourceProvider.forUri(uri, EXTRAS))
+      assertThat(ImageRequestBuilder.newBuilderWithSource(uri).build().sourceUri).isEqualTo(uri)
+    }
   }
 
   private companion object {
     const val RES_ID = 2131230720
     const val RES_URL = "res:/$RES_ID"
+    const val NEGATIVE_RES_ID = 0x80010000.toInt()
+    val INVALID_RES_URLS =
+        listOf("res:///drawable/icon", "res:/", "res:/2147483648", "res:/drawable/123", "res:123")
+    val NOT_RESOURCE_ID_RES_URLS =
+        listOf("res:/0", "res:/123", "res:/16777216", "res:/0?cstp=mx2147483648x1&ctp=s100x100")
     const val IMAGE_URL = "https://scontent.xx.fbcdn.net/v/t39.30808-6/1_2_3_n.jpg?ctp=s160x160"
     val EXTRAS: Map<String, Any> = mapOf("key" to "value")
   }
