@@ -9,7 +9,7 @@ package com.facebook.imagepipeline.animated.base
 
 import com.facebook.imagepipeline.image.EncodedImage
 
-interface AnimatedImageValidator {
+fun interface AnimatedImageValidator {
   fun validateImage(encodedImage: EncodedImage): ValidationResult
 }
 
