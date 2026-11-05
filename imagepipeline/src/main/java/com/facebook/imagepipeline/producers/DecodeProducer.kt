@@ -63,7 +63,7 @@ class DecodeProducer(
     val decodedOriginalImageAnalyzers: Set<DecodedOriginalImageAnalyzer>? = null,
 ) : Producer<CloseableReference<CloseableImage>> {
 
-  interface DecodedOriginalImageAnalyzer {
+  fun interface DecodedOriginalImageAnalyzer {
     fun analyze(
         context: ProducerContext,
         imageRef: CloseableReference<CloseableImage>,
