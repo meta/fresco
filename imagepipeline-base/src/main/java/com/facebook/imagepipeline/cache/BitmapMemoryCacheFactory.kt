@@ -14,7 +14,7 @@ import com.facebook.imagepipeline.cache.CountingMemoryCache.EntryStateObserver
 import com.facebook.imagepipeline.cache.MemoryCache.CacheTrimStrategy
 import com.facebook.imagepipeline.image.CloseableImage
 
-interface BitmapMemoryCacheFactory {
+fun interface BitmapMemoryCacheFactory {
   fun create(
       bitmapMemoryCacheParamsSupplier: Supplier<MemoryCacheParams>,
       memoryTrimmableRegistry: MemoryTrimmableRegistry,
