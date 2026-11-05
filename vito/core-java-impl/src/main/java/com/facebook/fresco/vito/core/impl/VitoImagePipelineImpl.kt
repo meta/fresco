@@ -199,14 +199,6 @@ class VitoImagePipelineImpl(
     }
   }
 
-  override fun returnImageToCache(
-      imageRequest: VitoImageRequest,
-      imageReference: CloseableReference<CloseableImage>,
-  ) {
-    val cacheKey = imageRequest.finalImageCacheKey ?: return
-    imagePipeline.returnImageToCache(cacheKey, imageReference)
-  }
-
   override fun evictFromCaches(imageRequest: VitoImageRequest) {
     val uri = imageRequest.finalImageRequest?.sourceUri ?: return
     imagePipeline.evictFromCache(uri)

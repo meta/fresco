@@ -1161,28 +1161,6 @@ class ImagePipeline(
     return closeableImage
   }
 
-  /**
-   * Returns an image reference to the bitmap memory cache. Used by Vito on detach to make recently
-   * displayed images available for reuse, improving scroll-back hit rate.
-   *
-   * Accepts any [CloseableImage] (static bitmaps as well as animated or XML/SVG decodes). Callers
-   * (Vito) are responsible for only offering back the image types they intend via the typed
-   * offer-back flags. The image is only cached if it is still valid, non-stateful, and of full
-   * quality, to avoid replacing better cached entries with intermediate or stale images, and
-   * consistent with `BitmapMemoryCacheProducer`'s refusal to cache stateful images (whose per-view
-   * render state, e.g. current animation frame, must not be shared across views).
-   */
-  fun returnImageToCache(
-      cacheKey: CacheKey,
-      imageReference: CloseableReference<CloseableImage>,
-  ) {
-    if (!CloseableReference.isValid(imageReference)) return
-    val image = imageReference.get()
-    if (image.isStateful) return
-    if (!image.qualityInfo.isOfFullQuality) return
-    CloseableReference.closeSafely(bitmapMemoryCache.cache(cacheKey, imageReference))
-  }
-
   fun hasCachedImage(cacheKey: CacheKey?): Boolean {
     return if (cacheKey == null) {
       false

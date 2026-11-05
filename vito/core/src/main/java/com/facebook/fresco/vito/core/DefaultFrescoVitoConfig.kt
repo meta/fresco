@@ -112,8 +112,6 @@ constructor(override val prefetchConfig: PrefetchConfig = DefaultPrefetchConfig(
 
   override fun disableBitmapCacheShortcut(): Boolean = false
 
-  override fun useOfferBackOnRelease(): Boolean = false
-
   override fun releaseImageOnVisibilityGoneImmediately(): Boolean = false
 
   override fun fixClearActualImageLayerOnClose(): Boolean = false
