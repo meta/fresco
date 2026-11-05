@@ -97,6 +97,6 @@ interface MemoryCache<K, V> : MemoryTrimmable, HasDebugData {
 }
 
 /** Optional capability for memory caches that support direct key removal. */
-interface MemoryCacheWithExactKeyRemoval<K> {
+fun interface MemoryCacheWithExactKeyRemoval<K> {
   fun remove(key: K): Int
 }
