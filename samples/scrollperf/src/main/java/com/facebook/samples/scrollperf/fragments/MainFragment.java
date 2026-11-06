@@ -197,6 +197,7 @@ public class MainFragment extends Fragment {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private SimpleAdapter<Uri> getExternalPhotoSimpleAdapter() {
     // NULLSAFE_FIXME[Parameter Not Nullable]
     if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.READ_EXTERNAL_STORAGE)

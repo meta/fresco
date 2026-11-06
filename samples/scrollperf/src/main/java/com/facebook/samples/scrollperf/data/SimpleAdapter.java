@@ -25,6 +25,7 @@ public interface SimpleAdapter<E> {
   /** Utility class for SimpleAdapter */
   class Util {
 
+    @SuppressWarnings("rawtypes")
     public static SimpleAdapter EMPTY_ADAPTER =
         new SimpleAdapter() {
           @Override
