@@ -36,19 +36,23 @@ public class SvgDecoderExample {
     ImageFormatCheckerUtils.asciiBytes("<?xml")
   };
 
+  // An XML prolog (<?xml ...?>, comments, DOCTYPE) can push <svg past the first few bytes,
+  // so the checker must look further into the file than the length of the tag itself.
+  private static final int MAX_HEADER_SIZE = 1024;
+
   public static class SvgFormatChecker implements ImageFormat.FormatChecker {
 
     public static final byte[] HEADER = ImageFormatCheckerUtils.asciiBytes(HEADER_TAG);
 
     @Override
     public int getHeaderSize() {
-      return HEADER.length;
+      return MAX_HEADER_SIZE;
     }
 
     @Nullable
     @Override
     public ImageFormat determineFormat(byte[] headerBytes, int headerSize) {
-      if (headerSize < getHeaderSize()) {
+      if (headerSize < HEADER.length) {
         return null;
       }
       if (ImageFormatCheckerUtils.startsWithPattern(headerBytes, HEADER)) {
@@ -56,8 +60,7 @@ public class SvgDecoderExample {
       }
       for (byte[] possibleHeaderTag : POSSIBLE_HEADER_TAGS) {
         if (ImageFormatCheckerUtils.startsWithPattern(headerBytes, possibleHeaderTag)
-            && ImageFormatCheckerUtils.indexOfPattern(
-                    headerBytes, headerBytes.length, HEADER, HEADER.length)
+            && ImageFormatCheckerUtils.indexOfPattern(headerBytes, headerSize, HEADER, HEADER.length)
                 > -1) {
           return SVG_FORMAT;
         }
