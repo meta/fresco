@@ -490,6 +490,19 @@ public class ImageRequestBuilder {
     return new ImageRequest(this);
   }
 
+  /**
+   * Fresco validates request format, not security. This allows to apply per app specific format
+   * validations.
+   */
+  public ImageRequest build(@Nullable Runnable validation) {
+    if (validation != null) {
+      validation.run();
+    } else {
+      validate();
+    }
+    return new ImageRequest(this);
+  }
+
   public @Nullable Boolean shouldDecodePrefetches() {
     return mDecodePrefetches;
   }
