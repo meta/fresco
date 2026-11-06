@@ -92,13 +92,13 @@ constructor(override val prefetchConfig: PrefetchConfig = DefaultPrefetchConfig(
 
   override fun experimentalDynamicSizeIsUriEligible(uri: Uri?): Boolean = true
 
-  override fun experimentalResetVitoImageRequestListener() = false
+  override fun experimentalResetVitoImageRequestListener(): Boolean = false
 
-  override fun experimentalResetLocalVitoImageRequestListener() = false
+  override fun experimentalResetLocalVitoImageRequestListener(): Boolean = false
 
-  override fun experimentalResetLocalImagePerfStateListener() = false
+  override fun experimentalResetLocalImagePerfStateListener(): Boolean = false
 
-  override fun experimentalResetControllerListener2() = false
+  override fun experimentalResetControllerListener2(): Boolean = false
 
   override fun isCallerContextBloks(callerContext: Any?): Boolean = false
 
@@ -130,7 +130,7 @@ constructor(override val prefetchConfig: PrefetchConfig = DefaultPrefetchConfig(
 
   override fun enablePrefetchTelemetry(): Boolean = false
 
-  open class DefaultPrefetchConfig : PrefetchConfig {
+  open class DefaultPrefetchConfig() : PrefetchConfig {
     override fun prefetchInOnPrepare(): Boolean = true
 
     override fun prefetchInOnBoundsDefinedForDynamicSize(): Boolean = false

@@ -43,7 +43,9 @@ class VitoImageRequest(
 
   override fun getExtras(): Map<String, Any> = extras
 
-  override fun putExtras(extras: Map<String, Any>) = extras.forEach { putExtra(it.key, it.value) }
+  override fun putExtras(extras: Map<String, Any>) {
+    extras.forEach { putExtra(it.key, it.value) }
+  }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) {

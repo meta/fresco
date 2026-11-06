@@ -11,7 +11,7 @@ import android.graphics.drawable.Drawable
 import com.facebook.fresco.ui.common.ControllerListener2
 import com.facebook.imagepipeline.image.ImageInfo
 
-open class BaseVitoImageRequestListener : VitoImageRequestListener {
+open class BaseVitoImageRequestListener() : VitoImageRequestListener {
   override fun onSubmit(
       id: Long,
       imageRequest: VitoImageRequest,
