@@ -232,6 +232,8 @@ class KFrescoVitoDrawable(
     drawableColorFilter = colorFilter
   }
 
+  override fun supportsColorFilter(): Boolean = false
+
   override fun getOpacity(): Int = PixelFormat.TRANSPARENT
 
   internal fun createLayer() = ImageLayerDataModel(

@@ -160,6 +160,8 @@ interface FrescoVitoConfig {
 
   fun enableComposeImagePathFixes(): Boolean = false
 
+  fun enableComposeColorFilterFix(): Boolean = false
+
   /**
    * Executor used to create a Compose painter's image request away from the main thread. A null
    * executor preserves synchronous request creation.
