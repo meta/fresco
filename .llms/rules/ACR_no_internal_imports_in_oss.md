@@ -1,10 +1,13 @@
 ---
-oncalls: ['fresco']
+name: acr-no-internal-imports-in-oss
 description: >
   Guard the OSS Gradle build — libraries/fresco/ is synced to GitHub.
   Flag internal imports, unavailable dependency versions, missing Gradle
   test deps, and internal-only API usage from codemods.
-apply_to_regex: 'libraries/fresco/(.*\.(kt|java|gradle)|.*/BUCK)$'
+metadata:
+  oncalls: ['fresco']
+  strict: true
+  apply_to_path: 'libraries/fresco/(.*\.(kt|java|gradle)|.*/BUCK)$'
 ---
 
 # OSS Build Compatibility for Fresco
