@@ -14,7 +14,6 @@ import android.os.Handler
 import android.os.Looper
 import com.facebook.common.callercontext.ContextChain
 import com.facebook.fresco.vito.core.FrescoDrawableInterface
-import com.facebook.fresco.vito.listener.ImageListener
 import com.facebook.fresco.vito.options.ImageOptions
 import com.facebook.fresco.vito.provider.FrescoVitoProvider
 import com.facebook.fresco.vito.source.ImageSourceProvider
@@ -73,7 +72,6 @@ object FrescoVitoSlideshowComponentSpec {
       @Prop(optional = true) isPlaying: Boolean,
       @Prop(optional = true) imageOptions: ImageOptions?,
       @Prop(optional = true) callerContext: Any?,
-      @Prop(optional = true) imageListener: ImageListener?,
       @TreeProp contextChain: ContextChain?,
       @Prop(optional = true) isAlternativeTimerLogicEnable: Boolean?,
       @State(canUpdateLazily = true) slideshowIndex: Int,
@@ -98,7 +96,6 @@ object FrescoVitoSlideshowComponentSpec {
         imageOptions,
         callerContext,
         contextChain,
-        imageListener,
     )
     // Immediately show current image
     slideshowDrawable.fadeToNext()
@@ -114,7 +111,6 @@ object FrescoVitoSlideshowComponentSpec {
           imageOptions,
           callerContext,
           contextChain,
-          imageListener,
       )
 
       var delayAttempt = 0
@@ -146,7 +142,6 @@ object FrescoVitoSlideshowComponentSpec {
                   callerContext,
                   contextChain,
                   nextIndex,
-                  imageListener,
               )
               currentIndex = nextIndex
               FrescoVitoSlideshowComponent.lazyUpdateSlideshowIndex(c, currentIndex)
@@ -199,7 +194,6 @@ object FrescoVitoSlideshowComponentSpec {
       callerContext: Any?,
       contextChain: ContextChain?,
       nextIndex: Int,
-      listener: ImageListener?,
   ) {
     // Do not transition until both current and next images are available
     if (
@@ -218,7 +212,6 @@ object FrescoVitoSlideshowComponentSpec {
         options,
         callerContext,
         contextChain,
-        listener,
     )
   }
 
@@ -232,7 +225,6 @@ object FrescoVitoSlideshowComponentSpec {
       options: ImageOptions?,
       callerContext: Any?,
       contextChain: ContextChain?,
-      listener: ImageListener?,
   ) {
     FrescoVitoProvider.getController()
         .fetch(
@@ -247,7 +239,7 @@ object FrescoVitoSlideshowComponentSpec {
                     ),
             callerContext = callerContext,
             contextChain = contextChain,
-            listener = listener,
+            listener = null,
             onFadeListener = null,
             viewportDimensions = null,
         )
