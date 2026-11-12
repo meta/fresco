@@ -27,16 +27,16 @@ class PriorityStarvingThrottlingProducer<T>(
     executor: Executor,
     inputProducer: Producer<T>,
 ) : Producer<T> {
-  private val mInputProducer = Preconditions.checkNotNull(inputProducer)
+  private val inputProducer = Preconditions.checkNotNull(inputProducer)
 
-  @GuardedBy("this") private val mPendingRequests: Queue<Item<T>>
+  @GuardedBy("this") private val pendingRequests: Queue<Item<T>>
 
   private val mExecutor = Preconditions.checkNotNull(executor)
 
-  @GuardedBy("this") private var mNumCurrentRequests = 0
+  @GuardedBy("this") private var numCurrentRequests = 0
 
   init {
-    mPendingRequests = PriorityQueue(11, PriorityComparator())
+    pendingRequests = PriorityQueue(11, PriorityComparator())
   }
 
   override fun produceResults(
@@ -48,11 +48,11 @@ class PriorityStarvingThrottlingProducer<T>(
     producerListener.onProducerStart(context, PRODUCER_NAME)
     val delayRequest: Boolean
     synchronized(this) {
-      if (mNumCurrentRequests >= mMaxSimultaneousRequests) {
-        mPendingRequests.add(Item(consumer, context, time))
+      if (numCurrentRequests >= mMaxSimultaneousRequests) {
+        pendingRequests.add(Item(consumer, context, time))
         delayRequest = true
       } else {
-        mNumCurrentRequests++
+        numCurrentRequests++
         delayRequest = false
       }
     }
@@ -65,7 +65,7 @@ class PriorityStarvingThrottlingProducer<T>(
   private fun produceResultsInternal(item: Item<T>) {
     val producerListener = item.producerContext.producerListener
     producerListener.onProducerFinishWithSuccess(item.producerContext, PRODUCER_NAME, null)
-    mInputProducer.produceResults(ThrottlerConsumer(item.consumer), item.producerContext)
+    inputProducer.produceResults(ThrottlerConsumer(item.consumer), item.producerContext)
   }
 
   internal class Item<T>(
@@ -116,9 +116,9 @@ class PriorityStarvingThrottlingProducer<T>(
     fun onRequestFinished() {
       val nextRequest: Item<T>?
       synchronized(this@PriorityStarvingThrottlingProducer) {
-        nextRequest = mPendingRequests.poll()
+        nextRequest = pendingRequests.poll()
         if (nextRequest == null) {
-          mNumCurrentRequests--
+          numCurrentRequests--
         }
       }
 

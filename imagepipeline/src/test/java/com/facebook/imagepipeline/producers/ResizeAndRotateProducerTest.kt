@@ -81,19 +81,19 @@ class ResizeAndRotateProducerTest {
 
   @Mock lateinit var mPooledByteBufferOutputStream: PooledByteBufferOutputStream
 
-  private lateinit var mTestExecutorService: TestExecutorService
-  private lateinit var mResizeAndRotateProducer: ResizeAndRotateProducer
-  private var mResizeAndRotateProducerConsumer: Consumer<EncodedImage>? = null
-  private lateinit var mIntermediateResult: CloseableReference<PooledByteBuffer>
-  private lateinit var mFinalResult: CloseableReference<PooledByteBuffer>
-  private lateinit var mPooledByteBuffer: PooledByteBuffer
+  private lateinit var testExecutorService: TestExecutorService
+  private lateinit var resizeAndRotateProducer: ResizeAndRotateProducer
+  private var resizeAndRotateProducerConsumer: Consumer<EncodedImage>? = null
+  private lateinit var intermediateResult: CloseableReference<PooledByteBuffer>
+  private lateinit var finalResult: CloseableReference<PooledByteBuffer>
+  private lateinit var pooledByteBuffer: PooledByteBuffer
 
-  private lateinit var mFakeClockForWorker: FakeClock
-  private lateinit var mFakeClockForScheduled: FakeClock
-  private lateinit var mTestScheduledExecutorService: TestScheduledExecutorService
-  private lateinit var mUiThreadImmediateExecutorService: UiThreadImmediateExecutorService
-  private lateinit var mIntermediateEncodedImage: EncodedImage
-  private lateinit var mFinalEncodedImage: EncodedImage
+  private lateinit var fakeClockForWorker: FakeClock
+  private lateinit var fakeClockForScheduled: FakeClock
+  private lateinit var testScheduledExecutorService: TestScheduledExecutorService
+  private lateinit var uiThreadImmediateExecutorService: UiThreadImmediateExecutorService
+  private lateinit var intermediateEncodedImage: EncodedImage
+  private lateinit var finalEncodedImage: EncodedImage
   private lateinit var mockedSystemClock: MockedStatic<SystemClock>
   private lateinit var mockedNativeJpegTranscoder: MockedStatic<NativeJpegTranscoder>
   private lateinit var mockedUiThreadImmediateExecutorService:
@@ -106,27 +106,27 @@ class ResizeAndRotateProducerTest {
     mockedNativeJpegTranscoder = mockStatic(NativeJpegTranscoder::class.java)
     mockedSystemClock = mockStatic(SystemClock::class.java)
     MockitoAnnotations.openMocks(this)
-    mFakeClockForWorker = FakeClock()
-    mFakeClockForScheduled = FakeClock()
-    mFakeClockForWorker.incrementBy(1000)
-    mFakeClockForScheduled.incrementBy(1000)
+    fakeClockForWorker = FakeClock()
+    fakeClockForScheduled = FakeClock()
+    fakeClockForWorker.incrementBy(1000)
+    fakeClockForScheduled.incrementBy(1000)
     mockedSystemClock
         .`when`<Long> { SystemClock.uptimeMillis() }
-        .thenAnswer { mFakeClockForWorker.now() }
+        .thenAnswer { fakeClockForWorker.now() }
 
     `when`(mImageRequest.getSourceUri()).thenReturn(Uri.parse("http://testuri"))
-    mTestExecutorService = TestExecutorService(mFakeClockForWorker)
-    mTestScheduledExecutorService = TestScheduledExecutorService(mFakeClockForScheduled)
-    mUiThreadImmediateExecutorService = mock(UiThreadImmediateExecutorService::class.java)
+    testExecutorService = TestExecutorService(fakeClockForWorker)
+    testScheduledExecutorService = TestScheduledExecutorService(fakeClockForScheduled)
+    uiThreadImmediateExecutorService = mock(UiThreadImmediateExecutorService::class.java)
     `when`(
-        mUiThreadImmediateExecutorService.schedule(
+        uiThreadImmediateExecutorService.schedule(
             any(Runnable::class.java),
             anyLong(),
             any(TimeUnit::class.java),
         ),
     )
         .thenAnswer { invocation ->
-          mTestScheduledExecutorService.schedule(
+          testScheduledExecutorService.schedule(
               invocation.arguments[0] as Runnable,
               invocation.arguments[1] as Long,
               invocation.arguments[2] as TimeUnit,
@@ -135,26 +135,26 @@ class ResizeAndRotateProducerTest {
 
     mockedUiThreadImmediateExecutorService
         .`when`<UiThreadImmediateExecutorService> { UiThreadImmediateExecutorService.getInstance() }
-        .thenAnswer { mUiThreadImmediateExecutorService }
+        .thenAnswer { uiThreadImmediateExecutorService }
 
-    mTestExecutorService = TestExecutorService(mFakeClockForWorker)
+    testExecutorService = TestExecutorService(fakeClockForWorker)
 
     doReturn(mImageRequest).`when`(mProducerContext).imageRequest
     doReturn(mProducerListener).`when`(mProducerContext).producerListener
     doReturn(true).`when`(mProducerListener).requiresExtraMap(eq(mProducerContext), anyString())
-    mIntermediateResult = CloseableReference.of(mock(PooledByteBuffer::class.java))
-    mFinalResult = CloseableReference.of(mock(PooledByteBuffer::class.java))
+    intermediateResult = CloseableReference.of(mock(PooledByteBuffer::class.java))
+    finalResult = CloseableReference.of(mock(PooledByteBuffer::class.java))
 
-    mResizeAndRotateProducerConsumer = null
+    resizeAndRotateProducerConsumer = null
     doAnswer { invocation ->
-          mResizeAndRotateProducerConsumer = invocation.arguments[0] as Consumer<EncodedImage>
+          resizeAndRotateProducerConsumer = invocation.arguments[0] as Consumer<EncodedImage>
           null
         }
         .`when`(mInputProducer)
         .produceResults(anyObject<Consumer<EncodedImage>>(), anyObject<ProducerContext>())
     doReturn(mPooledByteBufferOutputStream).`when`(mPooledByteBufferFactory).newOutputStream()
-    mPooledByteBuffer = TrivialPooledByteBuffer(byteArrayOf(1), 0)
-    doReturn(mPooledByteBuffer).`when`(mPooledByteBufferOutputStream).toByteBuffer()
+    pooledByteBuffer = TrivialPooledByteBuffer(byteArrayOf(1), 0)
+    doReturn(pooledByteBuffer).`when`(mPooledByteBufferOutputStream).toByteBuffer()
   }
 
   @After
@@ -276,8 +276,8 @@ class ResizeAndRotateProducerTest {
     )
     verifyAFinalResultPassedThroughNotResized()
 
-    assertThat(mFinalResult.underlyingReferenceTestOnly.refCountTestOnly).isEqualTo(2)
-    assertThat(mPooledByteBuffer.isClosed).isTrue
+    assertThat(finalResult.underlyingReferenceTestOnly.refCountTestOnly).isEqualTo(2)
+    assertThat(pooledByteBuffer.isClosed).isTrue
 
     verifyJpegTranscoderInteractions(8, rotationAngle)
   }
@@ -422,8 +422,8 @@ class ResizeAndRotateProducerTest {
     )
     verifyAFinalResultPassedThroughResized()
 
-    assertThat(mFinalResult.underlyingReferenceTestOnly.refCountTestOnly).isEqualTo(2)
-    assertThat(mPooledByteBuffer.isClosed).isTrue
+    assertThat(finalResult.underlyingReferenceTestOnly.refCountTestOnly).isEqualTo(2)
+    assertThat(pooledByteBuffer.isClosed).isTrue
 
     verifyJpegTranscoderInteractions(4, 0)
   }
@@ -637,7 +637,7 @@ class ResizeAndRotateProducerTest {
   }
 
   private fun verifyIntermediateResultPassedThroughUnchanged() {
-    verify(mConsumer).onNewResult(mIntermediateEncodedImage, Consumer.NO_FLAGS)
+    verify(mConsumer).onNewResult(intermediateEncodedImage, Consumer.NO_FLAGS)
   }
 
   private fun verifyNoIntermediateResultPassedThrough() {
@@ -645,7 +645,7 @@ class ResizeAndRotateProducerTest {
   }
 
   private fun verifyFinalResultPassedThroughUnchanged() {
-    verify(mConsumer).onNewResult(mFinalEncodedImage, Consumer.IS_LAST)
+    verify(mConsumer).onNewResult(finalEncodedImage, Consumer.IS_LAST)
   }
 
   private fun verifyAFinalResultPassedThroughResized() {
@@ -732,16 +732,16 @@ class ResizeAndRotateProducerTest {
       rotationAngle: Int,
       exifOrientation: Int,
   ) {
-    mIntermediateEncodedImage =
+    intermediateEncodedImage =
         buildEncodedImage(
-            mIntermediateResult,
+            intermediateResult,
             imageFormat,
             width,
             height,
             rotationAngle,
             exifOrientation,
         )
-    mResizeAndRotateProducerConsumer!!.onNewResult(mIntermediateEncodedImage, Consumer.NO_FLAGS)
+    resizeAndRotateProducerConsumer!!.onNewResult(intermediateEncodedImage, Consumer.NO_FLAGS)
   }
 
   private fun provideFinalResult(imageFormat: ImageFormat) {
@@ -755,11 +755,11 @@ class ResizeAndRotateProducerTest {
       rotationAngle: Int,
       exifOrientation: Int,
   ) {
-    mFinalEncodedImage =
-        buildEncodedImage(mFinalResult, imageFormat, width, height, rotationAngle, exifOrientation)
-    mResizeAndRotateProducerConsumer!!.onNewResult(mFinalEncodedImage, Consumer.IS_LAST)
-    mFakeClockForScheduled.incrementBy(MIN_TRANSFORM_INTERVAL_MS.toLong())
-    mFakeClockForWorker.incrementBy(MIN_TRANSFORM_INTERVAL_MS.toLong())
+    finalEncodedImage =
+        buildEncodedImage(finalResult, imageFormat, width, height, rotationAngle, exifOrientation)
+    resizeAndRotateProducerConsumer!!.onNewResult(finalEncodedImage, Consumer.IS_LAST)
+    fakeClockForScheduled.incrementBy(MIN_TRANSFORM_INTERVAL_MS.toLong())
+    fakeClockForWorker.incrementBy(MIN_TRANSFORM_INTERVAL_MS.toLong())
   }
 
   private fun whenResizingEnabled() {
@@ -776,16 +776,16 @@ class ResizeAndRotateProducerTest {
     `when`(jpegTranscoderFactory.createImageTranscoder(anyObject<ImageFormat>(), anyBoolean()))
         .thenReturn(nativeJpegTranscoder)
 
-    mResizeAndRotateProducer =
+    resizeAndRotateProducer =
         ResizeAndRotateProducer(
-            mTestExecutorService,
+            testExecutorService,
             mPooledByteBufferFactory,
             mInputProducer,
             resizingEnabled,
             jpegTranscoderFactory,
         )
 
-    mResizeAndRotateProducer.produceResults(mConsumer, mProducerContext)
+    resizeAndRotateProducer.produceResults(mConsumer, mProducerContext)
   }
 
   private fun whenRequestWidthAndHeight(preferredWidth: Int, preferredHeight: Int) {

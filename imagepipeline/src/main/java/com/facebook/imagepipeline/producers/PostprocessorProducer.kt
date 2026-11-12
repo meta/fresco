@@ -33,11 +33,11 @@ class PostprocessorProducer(
     private val mBitmapFactory: PlatformBitmapFactory,
     executor: Executor?,
 ) : Producer<CloseableReference<CloseableImage>> {
-  private val mInputProducer: Producer<CloseableReference<CloseableImage>>
+  private val inputProducer: Producer<CloseableReference<CloseableImage>>
   private val mExecutor: Executor
 
   init {
-    mInputProducer =
+    this.inputProducer =
         Preconditions.checkNotNull<Producer<CloseableReference<CloseableImage>>>(inputProducer)
     mExecutor = Preconditions.checkNotNull<Executor>(executor)
   }
@@ -58,7 +58,7 @@ class PostprocessorProducer(
     } else {
       postprocessorConsumer = SingleUsePostprocessorConsumer(basePostprocessorConsumer)
     }
-    mInputProducer.produceResults(postprocessorConsumer, context)
+    inputProducer.produceResults(postprocessorConsumer, context)
   }
 
   /** Performs postprocessing and takes care of scheduling. */
@@ -80,11 +80,11 @@ class PostprocessorProducer(
     @GuardedBy("PostprocessorConsumer.this")
     private var mSourceImageRef: CloseableReference<CloseableImage>? = null
 
-    @GuardedBy("PostprocessorConsumer.this") private var mStatus = 0
+    @GuardedBy("PostprocessorConsumer.this") private var status = 0
 
-    @GuardedBy("PostprocessorConsumer.this") private var mIsDirty = false
+    @GuardedBy("PostprocessorConsumer.this") private var isDirty = false
 
-    @GuardedBy("PostprocessorConsumer.this") private var mIsPostProcessingRunning = false
+    @GuardedBy("PostprocessorConsumer.this") private var isPostProcessingRunning = false
 
     init {
       mProducerContext.addCallbacks(
@@ -128,8 +128,8 @@ class PostprocessorProducer(
         }
         oldSourceImageRef = mSourceImageRef
         mSourceImageRef = CloseableReference.cloneOrNull<CloseableImage>(sourceImageRef)
-        mStatus = status
-        mIsDirty = true
+        this.status = status
+        isDirty = true
         shouldSubmit = setRunningIfDirtyAndNotRunning()
       }
       CloseableReference.closeSafely(oldSourceImageRef)
@@ -147,9 +147,9 @@ class PostprocessorProducer(
               synchronized(this@PostprocessorConsumer) {
                 // instead of cloning and closing the reference, we do a more efficient move.
                 closeableImageRef = mSourceImageRef
-                status = mStatus
+                status = this@PostprocessorConsumer.status
                 mSourceImageRef = null
-                mIsDirty = false
+                isDirty = false
               }
 
               if (CloseableReference.isValid(closeableImageRef)) {
@@ -168,7 +168,7 @@ class PostprocessorProducer(
     fun clearRunningAndStartIfDirty() {
       val shouldExecuteAgain: Boolean
       synchronized(this@PostprocessorConsumer) {
-        mIsPostProcessingRunning = false
+        isPostProcessingRunning = false
         shouldExecuteAgain = setRunningIfDirtyAndNotRunning()
       }
       if (shouldExecuteAgain) {
@@ -180,11 +180,11 @@ class PostprocessorProducer(
     fun setRunningIfDirtyAndNotRunning(): Boolean {
       if (
           !this.isClosed &&
-              mIsDirty &&
-              !mIsPostProcessingRunning &&
+              isDirty &&
+              !isPostProcessingRunning &&
               CloseableReference.isValid(mSourceImageRef)
       ) {
-        mIsPostProcessingRunning = true
+        isPostProcessingRunning = true
         return true
       }
       return false

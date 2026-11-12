@@ -24,12 +24,12 @@ class ThrottlingProducer<T>(
     executor: Executor,
     inputProducer: Producer<T>,
 ) : Producer<T> {
-  private val mInputProducer = Preconditions.checkNotNull(inputProducer)
+  private val inputProducer = Preconditions.checkNotNull(inputProducer)
 
-  @GuardedBy("this") private var mNumCurrentRequests = 0L
+  @GuardedBy("this") private var numCurrentRequests = 0L
 
   @GuardedBy("this")
-  private val mPendingRequests = ConcurrentLinkedQueue<Pair<Consumer<T>, ProducerContext>>()
+  private val pendingRequests = ConcurrentLinkedQueue<Pair<Consumer<T>, ProducerContext>>()
 
   private val mExecutor = Preconditions.checkNotNull(executor)
 
@@ -42,11 +42,11 @@ class ThrottlingProducer<T>(
 
     val delayRequest: Boolean
     synchronized(this) {
-      if (mNumCurrentRequests >= mMaxSimultaneousRequests) {
-        mPendingRequests.add(Pair.create(consumer, context))
+      if (numCurrentRequests >= mMaxSimultaneousRequests) {
+        pendingRequests.add(Pair.create(consumer, context))
         delayRequest = true
       } else {
-        mNumCurrentRequests++
+        numCurrentRequests++
         delayRequest = false
       }
     }
@@ -59,7 +59,7 @@ class ThrottlingProducer<T>(
   fun produceResultsInternal(consumer: Consumer<T>, producerContext: ProducerContext) {
     val producerListener = producerContext.producerListener
     producerListener.onProducerFinishWithSuccess(producerContext, PRODUCER_NAME, null)
-    mInputProducer.produceResults(ThrottlerConsumer(consumer), producerContext)
+    inputProducer.produceResults(ThrottlerConsumer(consumer), producerContext)
   }
 
   private inner class ThrottlerConsumer(consumer: Consumer<T>) :
@@ -84,9 +84,9 @@ class ThrottlingProducer<T>(
     fun onRequestFinished() {
       val nextRequestPair: Pair<Consumer<T>, ProducerContext>?
       synchronized(this@ThrottlingProducer) {
-        nextRequestPair = mPendingRequests.poll()
+        nextRequestPair = pendingRequests.poll()
         if (nextRequestPair == null) {
-          mNumCurrentRequests--
+          numCurrentRequests--
         }
       }
 

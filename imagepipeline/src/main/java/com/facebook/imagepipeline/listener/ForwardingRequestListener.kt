@@ -13,28 +13,28 @@ import com.facebook.infer.annotation.Nullsafe
 
 @Nullsafe(Nullsafe.Mode.LOCAL)
 class ForwardingRequestListener : RequestListener {
-  private val mRequestListeners: MutableList<RequestListener>
+  private val requestListeners: MutableList<RequestListener>
 
   constructor(requestListeners: Set<RequestListener?>) {
-    this.mRequestListeners = ArrayList(requestListeners.size)
+    this.requestListeners = ArrayList(requestListeners.size)
     for (requestListener in requestListeners) {
       if (requestListener != null) {
-        mRequestListeners.add(requestListener)
+        this.requestListeners.add(requestListener)
       }
     }
   }
 
   constructor(vararg requestListeners: RequestListener?) {
-    this.mRequestListeners = ArrayList(requestListeners.size)
+    this.requestListeners = ArrayList(requestListeners.size)
     for (requestListener in requestListeners) {
       if (requestListener != null) {
-        mRequestListeners.add(requestListener)
+        this.requestListeners.add(requestListener)
       }
     }
   }
 
   fun addRequestListener(requestListener: RequestListener) {
-    mRequestListeners.add(requestListener)
+    requestListeners.add(requestListener)
   }
 
   override fun onRequestStart(
@@ -43,9 +43,9 @@ class ForwardingRequestListener : RequestListener {
       requestId: String,
       isPrefetch: Boolean,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onRequestStart(request, callerContext, requestId, isPrefetch)
       } catch (exception: Exception) {
@@ -56,9 +56,9 @@ class ForwardingRequestListener : RequestListener {
   }
 
   override fun onProducerStart(requestId: String, producerName: String) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onProducerStart(requestId, producerName)
       } catch (exception: Exception) {
@@ -73,9 +73,9 @@ class ForwardingRequestListener : RequestListener {
       producerName: String,
       extraMap: Map<String?, String?>?,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onProducerFinishWithSuccess(requestId, producerName, extraMap)
       } catch (exception: Exception) {
@@ -91,9 +91,9 @@ class ForwardingRequestListener : RequestListener {
       t: Throwable,
       extraMap: Map<String?, String?>?,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onProducerFinishWithFailure(requestId, producerName, t, extraMap)
       } catch (exception: Exception) {
@@ -108,9 +108,9 @@ class ForwardingRequestListener : RequestListener {
       producerName: String,
       extraMap: Map<String?, String?>?,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onProducerFinishWithCancellation(requestId, producerName, extraMap)
       } catch (exception: Exception) {
@@ -121,9 +121,9 @@ class ForwardingRequestListener : RequestListener {
   }
 
   override fun onProducerEvent(requestId: String, producerName: String, producerEventName: String) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onProducerEvent(requestId, producerName, producerEventName)
       } catch (exception: Exception) {
@@ -138,9 +138,9 @@ class ForwardingRequestListener : RequestListener {
       producerName: String,
       successful: Boolean,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onUltimateProducerReached(requestId, producerName, successful)
       } catch (exception: Exception) {
@@ -151,9 +151,9 @@ class ForwardingRequestListener : RequestListener {
   }
 
   override fun onRequestSuccess(request: ImageRequest, requestId: String, isPrefetch: Boolean) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onRequestSuccess(request, requestId, isPrefetch)
       } catch (exception: Exception) {
@@ -169,9 +169,9 @@ class ForwardingRequestListener : RequestListener {
       throwable: Throwable,
       isPrefetch: Boolean,
   ) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onRequestFailure(request, requestId, throwable, isPrefetch)
       } catch (exception: Exception) {
@@ -182,9 +182,9 @@ class ForwardingRequestListener : RequestListener {
   }
 
   override fun onRequestCancellation(requestId: String) {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      val listener = mRequestListeners[i]
+      val listener = requestListeners[i]
       try {
         listener.onRequestCancellation(requestId)
       } catch (exception: Exception) {
@@ -195,9 +195,9 @@ class ForwardingRequestListener : RequestListener {
   }
 
   override fun requiresExtraMap(id: String): Boolean {
-    val numberOfListeners = mRequestListeners.size
+    val numberOfListeners = requestListeners.size
     for (i in 0..<numberOfListeners) {
-      if (mRequestListeners[i].requiresExtraMap(id)) {
+      if (requestListeners[i].requiresExtraMap(id)) {
         return true
       }
     }

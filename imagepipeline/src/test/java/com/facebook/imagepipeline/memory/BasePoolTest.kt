@@ -24,12 +24,12 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class BasePoolTest {
   private var mPool: TestPool? = null
-  private var mStats: PoolStats<ByteArray>? = null
+  private var stats: PoolStats<ByteArray>? = null
 
   @Before
   fun setup() {
     mPool = TestPool()
-    mStats = PoolStats<ByteArray>(mPool!!)
+    stats = PoolStats<ByteArray>(mPool!!)
   }
 
   // Test out the alloc method
@@ -96,13 +96,13 @@ class BasePoolTest {
     Assertions.assertThat(b1).isNotNull()
     Assertions.assertThat(b1.size).isEqualTo(2)
     Assertions.assertThat(mPool!!.inUseValues.contains(b1)).isTrue()
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(1, 0)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
 
     // release this buffer
     mPool!!.release(b1)
@@ -113,13 +113,13 @@ class BasePoolTest {
     Assertions.assertThat(b2).isNotNull()
     Assertions.assertThat(b2.size).isEqualTo(4)
     Assertions.assertThat(mPool!!.inUseValues.contains(b2)).isTrue()
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(0, 1), 4, IntPair(1, 0)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(4)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(1)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(4)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
   }
 
   // Tests that we can reuse a free buffer in the pool
@@ -131,26 +131,26 @@ class BasePoolTest {
     mPool!!.release(b1)
     Assertions.assertThat(b1).isNotNull()
     Assertions.assertThat(b1.size).isEqualTo(2)
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(0, 1)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(1)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(0)
 
     // get another buffer of the same size as above. We should be able to reuse it
     val b2 = mPool!!.get(1)
     Assertions.assertThat(b2).isNotNull()
     Assertions.assertThat(b2.size).isEqualTo(2)
     Assertions.assertThat(mPool!!.inUseValues.contains(b2)).isTrue()
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(1, 0)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
   }
 
   // test a simple release
@@ -163,13 +163,13 @@ class BasePoolTest {
     mPool!!.release(b1)
 
     // verify stats
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(0, 1)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(1)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(0)
   }
 
   // Test release with bucket length constraints
@@ -177,29 +177,29 @@ class BasePoolTest {
   @Throws(Exception::class)
   fun testRelease_BucketLengths() {
     mPool = TestPool(makeBucketSizeArray(2, 2))
-    mStats!!.setPool(mPool!!)
+    stats!!.setPool(mPool!!)
 
     val b0 = mPool!!.get(2)
     mPool!!.get(2)
     mPool!!.get(2)
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(3, 0)))
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(6)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(3)
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(6)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(3)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
 
     // now release one of the buffers
     mPool!!.release(b0)
 
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(2, 0)))
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(4)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(2)
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(4)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(2)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
   }
 
   // Test releasing an 'unknown' value
@@ -215,13 +215,13 @@ class BasePoolTest {
     mPool!!.release(b2)
 
     // verify stats
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(1, 0)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
   }
 
   // test out release with non reusable values
@@ -230,20 +230,20 @@ class BasePoolTest {
   fun testRelease_NonReusable() {
     val pool = TestPool(makeBucketSizeArray(2, 3))
     mPool!!.mIsReusable = false
-    mStats!!.setPool(pool)
+    stats!!.setPool(pool)
 
     // get a buffer, and then release it
     val b1 = mPool!!.get(2)
     mPool!!.release(b1)
 
     // verify stats
-    mStats!!.refresh()
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(ImmutableMap.of<Int, IntPair>(2, IntPair(0, 0)))
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(0)
   }
 
   // test buffers outside the 'normal' bucket sizes
@@ -251,27 +251,27 @@ class BasePoolTest {
   @Throws(Exception::class)
   fun testGetRelease_NonBucketSizes() {
     mPool = TestPool(makeBucketSizeArray(2, 1, 4, 1, 6, 1))
-    mStats!!.setPool(mPool!!)
+    stats!!.setPool(mPool!!)
 
     mPool!!.get(2)
     val b1 = mPool!!.get(7)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(10)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(2)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(10)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(2)
     mPool!!.release(b1)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
 
     val b2 = ByteArray(3)
     mPool!!.release(b2)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedCount).isEqualTo(1)
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.freeCount).isEqualTo(0)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedCount).isEqualTo(1)
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.freeCount).isEqualTo(0)
   }
 
   // test illegal arguments to get
@@ -294,15 +294,15 @@ class BasePoolTest {
     val b1 = mPool!!.get(1)
     mPool!!.release(b1)
     mPool!!.get(3)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(2)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(4)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(2)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(4)
 
     // trim the pool and check
     mPool!!.trimToNothing()
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(4)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(4)
   }
 
   // test out trimToSize functionality
@@ -310,7 +310,7 @@ class BasePoolTest {
   @Throws(Exception::class)
   fun testTrimToSize() {
     mPool = TestPool(makeBucketSizeArray(2, 2, 4, 2, 6, 2))
-    mStats!!.setPool(mPool!!)
+    stats!!.setPool(mPool!!)
 
     // allocate and release multiple buffers
     var b1: ByteArray?
@@ -322,32 +322,32 @@ class BasePoolTest {
     b1 = mPool!!.get(4)
     mPool!!.release(b1)
 
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(12)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(12)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
 
     // perform a dummy trim - nothing should happen
     mPool!!.trimToSize(100)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(12)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(12)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
 
     // now perform the real trim
     mPool!!.trimToSize(8)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(6)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(6)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(
             ImmutableMap.of<Int, IntPair>(2, IntPair(1, 0), 4, IntPair(0, 0), 6, IntPair(0, 1)),
         )
 
     // perform another trim
     mPool!!.trimToSize(1)
-    mStats!!.refresh()
-    Assertions.assertThat(mStats!!.freeBytes).isEqualTo(0)
-    Assertions.assertThat(mStats!!.usedBytes).isEqualTo(2)
-    Assertions.assertThat<Int, IntPair>(mStats!!.bucketStats)
+    stats!!.refresh()
+    Assertions.assertThat(stats!!.freeBytes).isEqualTo(0)
+    Assertions.assertThat(stats!!.usedBytes).isEqualTo(2)
+    Assertions.assertThat<Int, IntPair>(stats!!.bucketStats)
         .isEqualTo(
             ImmutableMap.of<Int, IntPair>(2, IntPair(1, 0), 4, IntPair(0, 0), 6, IntPair(0, 0)),
         )

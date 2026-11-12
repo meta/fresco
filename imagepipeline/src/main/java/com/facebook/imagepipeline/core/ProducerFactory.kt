@@ -125,7 +125,7 @@ open class ProducerFactory(
 
   protected val mKeepCancelledFetchAsLowPriority: Boolean
 
-  private val mConfig: ImagePipelineConfigInterface
+  private val config: ImagePipelineConfigInterface
 
   init {
     mContentResolver = context.getApplicationContext().getContentResolver()
@@ -157,7 +157,7 @@ open class ProducerFactory(
 
     mKeepCancelledFetchAsLowPriority = keepCancelledFetchAsLowPriority
 
-    mConfig = config
+    this.config = config
   }
 
   @Deprecated("")
@@ -224,7 +224,7 @@ open class ProducerFactory(
       inputProducer: Producer<CloseableReference<CloseableImage>>,
       cacheKeyFactory: CacheKeyFactory,
   ): BitmapMemoryCacheKeyMultiplexProducer {
-    return BitmapMemoryCacheKeyMultiplexProducer(cacheKeyFactory, inputProducer, mConfig)
+    return BitmapMemoryCacheKeyMultiplexProducer(cacheKeyFactory, inputProducer, config)
   }
 
   fun newBitmapMemoryCacheProducer(
@@ -282,7 +282,7 @@ open class ProducerFactory(
         mCacheKeyFactory,
         mKeepCancelledFetchAsLowPriority,
         inputProducer,
-        mConfig,
+        config,
     )
   }
 
