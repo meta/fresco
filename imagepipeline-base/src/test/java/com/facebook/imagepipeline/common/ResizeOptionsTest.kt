@@ -54,4 +54,42 @@ class ResizeOptionsTest {
 
     assertThat(resizeOptions).isNull()
   }
+
+  @Test
+  fun testKotlinDefaultConstructorPreservesBinaryCompatibility() {
+    val constructor =
+        ResizeOptions::class
+            .java
+            .getConstructor(
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType,
+                Float::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                Class.forName("kotlin.jvm.internal.DefaultConstructorMarker"),
+            )
+    val defaults = constructor.newInstance(1, 2, 0f, 0f, 12, null)
+    val expected = ResizeOptions(1, 2)
+
+    assertThat(defaults.maxBitmapDimension).isEqualTo(expected.maxBitmapDimension)
+    assertThat(defaults.roundUpFraction).isEqualTo(expected.roundUpFraction)
+    assertThat(defaults.transcoder).isEqualTo(ResizeOptions.Transcoder.DEFAULT)
+
+    val explicit = constructor.newInstance(1, 2, 100f, 0.5f, 0, null)
+
+    assertThat(explicit.maxBitmapDimension).isEqualTo(100f)
+    assertThat(explicit.roundUpFraction).isEqualTo(0.5f)
+    assertThat(explicit.transcoder).isEqualTo(ResizeOptions.Transcoder.DEFAULT)
+  }
+
+  @Test
+  fun testTranscoderParticipatesInEquality() {
+    val defaultTranscoder = ResizeOptions(1, 2)
+    val noTranscoder = ResizeOptions(1, 2, transcoder = ResizeOptions.Transcoder.NONE)
+
+    assertThat(noTranscoder).isNotEqualTo(defaultTranscoder)
+    assertThat(noTranscoder.hashCode()).isNotEqualTo(defaultTranscoder.hashCode())
+    assertThat(noTranscoder)
+        .isEqualTo(ResizeOptions(1, 2, transcoder = ResizeOptions.Transcoder.NONE))
+  }
 }

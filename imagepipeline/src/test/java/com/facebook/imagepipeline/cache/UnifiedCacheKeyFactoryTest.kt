@@ -109,6 +109,20 @@ class UnifiedCacheKeyFactoryTest {
   }
 
   @Test
+  fun frescoAdapter_separatesBitmapKeysByResizeTranscoder() {
+    fun bitmapKey(transcoder: ResizeOptions.Transcoder) =
+        factory.getBitmapCacheKey(
+            ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image.jpg"))
+                .setResizeOptions(ResizeOptions(40, 50, transcoder = transcoder))
+                .build(),
+            null,
+        )
+
+    assertThat(bitmapKey(ResizeOptions.Transcoder.NONE))
+        .isNotEqualTo(bitmapKey(ResizeOptions.Transcoder.DEFAULT))
+  }
+
+  @Test
   fun frescoAdapter_preservesCustomAndPostprocessorIdentity() {
     val postprocessor =
         object : BasePostprocessor() {

@@ -48,6 +48,7 @@ import org.mockito.ArgumentMatchers.anyString
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mock
 import org.mockito.MockedStatic
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.mock
@@ -455,6 +456,58 @@ class ResizeAndRotateProducerTest {
     verifyFinalResultPassedThroughUnchanged()
 
     verifyZeroJpegTranscoderInteractions()
+  }
+
+  @Test
+  fun testDisablesResizingIfResizeTranscoderIsNone() {
+    verifyResizingEnabledForTranscoder(ResizeOptions.Transcoder.NONE, 600, false)
+  }
+
+  @Test
+  fun testDisablesResizingForDecodeScaleIfResizeTranscoderIsNoneForDecodeScales() {
+    // 300 / 600 is a 4/8 transcode, and the decode samples by 2.
+    verifyResizingEnabledForTranscoder(ResizeOptions.Transcoder.NONE_FOR_DECODE_SCALES, 600, false)
+  }
+
+  @Test
+  fun testKeepsResizingForOtherScalesIfResizeTranscoderIsNoneForDecodeScales() {
+    // 300 / 800 is a 3/8 transcode, and the decode samples by 2.
+    verifyResizingEnabledForTranscoder(ResizeOptions.Transcoder.NONE_FOR_DECODE_SCALES, 800, true)
+  }
+
+  private fun verifyResizingEnabledForTranscoder(
+      transcoder: ResizeOptions.Transcoder,
+      imageWidth: Int,
+      expectedResizingEnabled: Boolean,
+  ) {
+    `when`(mImageRequest.getResizeOptions())
+        .thenReturn(ResizeOptions(300, 600, transcoder = transcoder))
+    `when`(mImageRequest.getResizingAllowedOverride()).thenReturn(null)
+    whenRequestSpecificRotation(RotationOptions.NO_ROTATION)
+    val transcoderFactory = mock(NativeJpegTranscoderFactory::class.java)
+    `when`(transcoderFactory.createImageTranscoder(anyObject<ImageFormat>(), anyBoolean()))
+        .thenReturn(NativeJpegTranscoder(false, MAX_BITMAP_SIZE, false, false))
+
+    ResizeAndRotateProducer(
+        testExecutorService,
+        mPooledByteBufferFactory,
+        mInputProducer,
+        true,
+        transcoderFactory,
+    )
+        .produceResults(mConsumer, mProducerContext)
+    provideFinalResult(
+        DefaultImageFormats.JPEG,
+        imageWidth,
+        imageWidth * 2,
+        0,
+        ExifInterface.ORIENTATION_NORMAL,
+    )
+
+    verify(transcoderFactory, atLeastOnce())
+        .createImageTranscoder(anyObject<ImageFormat>(), eq(expectedResizingEnabled))
+    verify(transcoderFactory, never())
+        .createImageTranscoder(anyObject<ImageFormat>(), eq(!expectedResizingEnabled))
   }
 
   @Test

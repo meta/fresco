@@ -25,6 +25,7 @@ import com.facebook.imagepipeline.common.ResizeOptions;
 import com.facebook.imagepipeline.common.RotationOptions;
 import com.facebook.imagepipeline.image.EncodedImage;
 import com.facebook.imagepipeline.request.ImageRequest;
+import com.facebook.imagepipeline.transcoder.DownsampleUtil;
 import com.facebook.imagepipeline.transcoder.ImageTranscodeResult;
 import com.facebook.imagepipeline.transcoder.ImageTranscoder;
 import com.facebook.imagepipeline.transcoder.ImageTranscoderFactory;
@@ -98,12 +99,17 @@ public class ResizeAndRotateProducer implements Producer<EncodedImage> {
       mIsCancelled = false;
       mProducerContext = producerContext;
 
-      final Boolean resizingAllowedOverride =
-          mProducerContext.getImageRequest().getResizingAllowedOverride();
-      mIsResizingEnabled =
-          resizingAllowedOverride != null
-              ? resizingAllowedOverride // use request settings if available
-              : isResizingEnabled; // fallback to default option supplied
+      final ImageRequest imageRequest = mProducerContext.getImageRequest();
+      final ResizeOptions resizeOptions = imageRequest.getResizeOptions();
+      final Boolean resizingAllowedOverride = imageRequest.getResizingAllowedOverride();
+      if (resizeOptions != null && resizeOptions.transcoder == ResizeOptions.Transcoder.NONE) {
+        mIsResizingEnabled = false;
+      } else {
+        mIsResizingEnabled =
+            resizingAllowedOverride != null
+                ? resizingAllowedOverride // use request settings if available
+                : isResizingEnabled; // fallback to default option supplied
+      }
 
       mImageTranscoderFactory = imageTranscoderFactory;
 
@@ -117,7 +123,7 @@ public class ResizeAndRotateProducer implements Producer<EncodedImage> {
                     status,
                     Preconditions.checkNotNull(
                         mImageTranscoderFactory.createImageTranscoder(
-                            encodedImage.getImageFormat(), mIsResizingEnabled)));
+                            encodedImage.getImageFormat(), isResizingEnabled(encodedImage))));
               } else {
                 getConsumer().onNewResult(null, status);
               }
@@ -162,7 +168,8 @@ public class ResizeAndRotateProducer implements Producer<EncodedImage> {
               mProducerContext.getImageRequest(),
               newResult,
               Preconditions.checkNotNull(
-                  mImageTranscoderFactory.createImageTranscoder(imageFormat, mIsResizingEnabled)));
+                  mImageTranscoderFactory.createImageTranscoder(
+                      imageFormat, isResizingEnabled(newResult))));
       // ignore the intermediate result if we don't know what to do with it
       if (!isLast && shouldTransform == TriState.UNSET) {
         return;
@@ -179,6 +186,27 @@ public class ResizeAndRotateProducer implements Producer<EncodedImage> {
       if (isLast || mProducerContext.isIntermediateResultExpected()) {
         mJobScheduler.scheduleJob();
       }
+    }
+
+    private boolean isResizingEnabled(EncodedImage encodedImage) {
+      if (!mIsResizingEnabled) {
+        return false;
+      }
+      final ImageRequest imageRequest = mProducerContext.getImageRequest();
+      final ResizeOptions resizeOptions = imageRequest.getResizeOptions();
+      if (resizeOptions == null
+          || resizeOptions.transcoder != ResizeOptions.Transcoder.NONE_FOR_DECODE_SCALES
+          || encodedImage.getImageFormat() != JPEG) {
+        return true;
+      }
+      final RotationOptions rotationOptions = imageRequest.getRotationOptions();
+      final int numerator =
+          JpegTranscoderUtils.getSoftwareNumerator(
+              rotationOptions, resizeOptions, encodedImage, true);
+      final int sampleSize =
+          DownsampleUtil.determineSampleSize(
+              rotationOptions, resizeOptions, encodedImage, (int) resizeOptions.maxBitmapDimension);
+      return numerator * sampleSize != JpegTranscoderUtils.SCALE_DENOMINATOR;
     }
 
     private void forwardNewResult(
