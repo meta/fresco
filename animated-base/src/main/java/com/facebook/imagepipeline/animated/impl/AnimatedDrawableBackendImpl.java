@@ -329,10 +329,11 @@ public class AnimatedDrawableBackendImpl implements AnimatedDrawableBackend {
   private void maybeDisposeBackground(
       Canvas canvas, float xScale, float yScale, AnimatedDrawableFrameInfo previousFrameInfo) {
     if (previousFrameInfo.disposalMethod == DisposalMethod.DISPOSE_TO_BACKGROUND) {
-      int prevFrameWidth = (int) Math.ceil(previousFrameInfo.width * xScale);
-      int prevFrameHeight = (int) Math.ceil(previousFrameInfo.height * yScale);
-      int prevXOffset = (int) Math.ceil(previousFrameInfo.xOffset * xScale);
-      int prevYOffset = (int) Math.ceil(previousFrameInfo.yOffset * yScale);
+      boolean roundUp = mAnimatedImage.doesRenderSupportScaling();
+      int prevFrameWidth = scaleFrameCoordinate(previousFrameInfo.width, xScale, roundUp);
+      int prevFrameHeight = scaleFrameCoordinate(previousFrameInfo.height, yScale, roundUp);
+      int prevXOffset = scaleFrameCoordinate(previousFrameInfo.xOffset, xScale, roundUp);
+      int prevYOffset = scaleFrameCoordinate(previousFrameInfo.yOffset, yScale, roundUp);
       Rect prevFrameSurface =
           new Rect(
               prevXOffset,
@@ -341,6 +342,10 @@ public class AnimatedDrawableBackendImpl implements AnimatedDrawableBackend {
               prevYOffset + prevFrameHeight);
       canvas.drawRect(prevFrameSurface, mTransparentPaint);
     }
+  }
+
+  private static int scaleFrameCoordinate(int value, float scale, boolean roundUp) {
+    return roundUp ? (int) Math.ceil(value * scale) : (int) (value * scale);
   }
 
   private void renderImageDoesNotSupportScaling(Canvas canvas, AnimatedImageFrame frame) {
