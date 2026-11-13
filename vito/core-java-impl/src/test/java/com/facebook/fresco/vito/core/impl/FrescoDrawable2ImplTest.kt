@@ -8,6 +8,7 @@
 package com.facebook.fresco.vito.core.impl
 
 import android.content.res.Resources
+import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Handler
@@ -22,6 +23,8 @@ import com.facebook.fresco.vito.options.ImageOptions
 import com.facebook.fresco.vito.source.ImageSourceProvider
 import com.facebook.imagepipeline.image.BaseCloseableImage
 import com.facebook.imagepipeline.image.CloseableImage
+import com.facebook.imagepipeline.image.CloseableStaticBitmap
+import com.facebook.imagepipeline.image.ImmutableQualityInfo
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
@@ -32,6 +35,9 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
@@ -220,20 +226,75 @@ class FrescoDrawable2ImplTest {
         assertThat(closeableImage.isClosed).isTrue()
       }
 
+  @Test
+  fun testPrepareToDrawOnFetch_asynchronousBitmapFollowsConfig() {
+    for (isEnabled in listOf(false, true)) {
+      val bitmap = spy(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+      CloseableReference.of<CloseableImage>(
+              CloseableStaticBitmap.of(
+                  bitmap,
+                  { it.recycle() },
+                  ImmutableQualityInfo.FULL_QUALITY,
+                  0,
+              ),
+          )
+          .use { imageReference ->
+            withImageRequest(enablePrepareToDrawOnFetch = isEnabled) { _, _, dataSource ->
+              verify(bitmap, never()).prepareToDraw()
+              assertThat(dataSource.complete(imageReference)).isTrue()
+              shadowOf(Looper.getMainLooper()).runToEndOfTasks()
+              assertThat(frescoDrawable.imageReference?.get()).isSameAs(imageReference.get())
+              verify(bitmap, times(if (isEnabled) 1 else 0)).prepareToDraw()
+            }
+          }
+    }
+  }
+
+  @Test
+  fun testPrepareToDrawOnFetch_cachedBitmapFollowsConfig() {
+    for (isEnabled in listOf(false, true)) {
+      val bitmap = spy(Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888))
+      CloseableReference.of<CloseableImage>(
+              CloseableStaticBitmap.of(
+                  bitmap,
+                  { it.recycle() },
+                  ImmutableQualityInfo.FULL_QUALITY,
+                  0,
+              ),
+          )
+          .use { imageReference ->
+            withImageRequest(
+                enablePrepareToDrawOnFetch = isEnabled,
+                cachedImage = imageReference,
+            ) { _, _, _ ->
+              assertThat(frescoDrawable.imageReference?.get()).isSameAs(imageReference.get())
+              verify(bitmap, times(if (isEnabled) 1 else 0)).prepareToDraw()
+            }
+          }
+    }
+  }
+
   private fun withImageRequest(
       preservePendingRelease: Boolean = true,
+      enablePrepareToDrawOnFetch: Boolean = false,
+      cachedImage: CloseableReference<CloseableImage>? = null,
       test: (FrescoController2Impl, VitoImageRequest, TestImageDataSource) -> Unit,
   ) {
     val mainLooper = shadowOf(Looper.getMainLooper())
     mainLooper.pause()
     val dataSource = TestImageDataSource()
     val pipeline = mock<VitoImagePipeline>()
+    whenever(pipeline.getCachedImage(any())).thenAnswer {
+      CloseableReference.cloneOrNull(cachedImage)
+    }
     whenever(pipeline.fetchDecodedImage(any(), anyOrNull(), anyOrNull(), any(), anyOrNull()))
         .thenReturn(dataSource)
     val controller = FrescoController2Impl(
         config =
             object : DefaultFrescoVitoConfig() {
               override fun preservePendingReleaseOnImageUpdate(): Boolean = preservePendingRelease
+
+              override fun enablePrepareToDrawOnFetch(): Boolean = enablePrepareToDrawOnFetch
             },
         hierarcher = mock(),
         lightweightBackgroundThreadExecutor = Executor { it.run() },
@@ -253,11 +314,14 @@ class FrescoDrawable2ImplTest {
         finalImageCacheKey = null,
     )
     try {
-      assertThat(fetch(controller, request)).isFalse()
-      assertThat(frescoDrawable.imageReference).isNull()
+      assertThat(fetch(controller, request)).isEqualTo(cachedImage != null)
+      if (cachedImage == null) {
+        assertThat(frescoDrawable.imageReference).isNull()
+      }
       assertThat(frescoDrawable.isFetchSubmitted).isTrue()
       test(controller, request, dataSource)
-      verify(pipeline).fetchDecodedImage(any(), anyOrNull(), anyOrNull(), any(), anyOrNull())
+      verify(pipeline, times(if (cachedImage == null) 1 else 0))
+          .fetchDecodedImage(any(), anyOrNull(), anyOrNull(), any(), anyOrNull())
     } finally {
       frescoDrawable.close()
       dataSource.close()
