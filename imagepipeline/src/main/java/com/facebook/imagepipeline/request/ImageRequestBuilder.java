@@ -12,6 +12,7 @@ import static com.facebook.imagepipeline.request.ImageRequest.CachesLocationsMas
 import static com.facebook.imagepipeline.request.ImageRequest.RequestLevel;
 
 import android.net.Uri;
+import com.facebook.common.internal.Fn;
 import com.facebook.common.internal.Preconditions;
 import com.facebook.common.util.UriUtil;
 import com.facebook.imagepipeline.common.BytesRange;
@@ -36,6 +37,7 @@ public class ImageRequestBuilder {
 
   private static final Set<String> CUSTOM_NETWORK_SCHEMES = new HashSet<>();
   @Nullable private Uri mSourceUri = null;
+  @Nullable private Fn<ImageRequestBuilder, Uri> mSourceUriSupplier = null;
   private RequestLevel mLowestPermittedRequestLevel = RequestLevel.FULL_FETCH;
   private int mCachesDisabled = 0; // All caches enabled by default
   private @Nullable ResizeOptions mResizeOptions = null;
@@ -68,6 +70,12 @@ public class ImageRequestBuilder {
    */
   public static ImageRequestBuilder newBuilderWithSource(Uri uri) {
     return new ImageRequestBuilder().setSource(uri);
+  }
+
+  /** Creates a builder with a source resolved on its first read. See {@link #setSourceSupplier}. */
+  public static ImageRequestBuilder newBuilderWithSourceSupplier(
+      Fn<ImageRequestBuilder, Uri> supplier) {
+    return new ImageRequestBuilder().setSourceSupplier(supplier);
   }
 
   /**
@@ -141,11 +149,32 @@ public class ImageRequestBuilder {
     Preconditions.checkNotNull(uri);
 
     mSourceUri = uri;
+    mSourceUriSupplier = null;
     return this;
   }
 
-  /** Gets the source Uri. */
+  /**
+   * Sets a deferred source. The supplier receives this builder and must not read its source. Its
+   * result is memoized on the first source read, including validation, disk-cache checks, or
+   * building the request. A null result leaves the source unset, which {@link #build} rejects.
+   *
+   * <p>Replacing the source with {@link #setSource} or another supplier discards the previous
+   * source.
+   */
+  public ImageRequestBuilder setSourceSupplier(Fn<ImageRequestBuilder, Uri> supplier) {
+    Preconditions.checkNotNull(supplier);
+    mSourceUri = null;
+    mSourceUriSupplier = supplier;
+    return this;
+  }
+
+  /** Gets the source Uri, resolving and memoizing a deferred source if present. */
   public Uri getSourceUri() {
+    if (mSourceUriSupplier != null) {
+      Fn<ImageRequestBuilder, Uri> supplier = mSourceUriSupplier;
+      mSourceUriSupplier = null;
+      mSourceUri = supplier.apply(this);
+    }
     return mSourceUri;
   }
 
@@ -367,8 +396,9 @@ public class ImageRequestBuilder {
   /** Returns whether the use of the disk cache is enabled, which is partly dependent on the URI. */
   public boolean isDiskCacheEnabled() {
     int mask = CachesLocationsMasks.DISK_READ | CachesLocationsMasks.DISK_WRITE;
+    Uri sourceUri = getSourceUri();
     return ((mCachesDisabled & mask) == 0)
-        && (UriUtil.isNetworkUri(mSourceUri) || isCustomNetworkUri(mSourceUri));
+        && (UriUtil.isNetworkUri(sourceUri) || isCustomNetworkUri(sourceUri));
   }
 
   /** Disables memory cache for this request. */
@@ -497,6 +527,9 @@ public class ImageRequestBuilder {
   public ImageRequest build(@Nullable Runnable validation) {
     if (validation != null) {
       validation.run();
+      if (getSourceUri() == null) {
+        throw new BuilderException("Source must be set!");
+      }
     } else {
       validate();
     }
@@ -597,21 +630,22 @@ public class ImageRequestBuilder {
 
   /** Performs validation. */
   protected void validate() {
+    Uri sourceUri = getSourceUri();
     // make sure that the source uri is set correctly.
-    if (mSourceUri == null) {
+    if (sourceUri == null) {
       throw new BuilderException("Source must be set!");
     }
 
     // For local resource we require caller to specify statically generated resource id as a path.
-    if (UriUtil.isLocalResourceUri(mSourceUri)) {
-      if (!mSourceUri.isAbsolute()) {
+    if (UriUtil.isLocalResourceUri(sourceUri)) {
+      if (!sourceUri.isAbsolute()) {
         throw new BuilderException("Resource URI path must be absolute.");
       }
-      if (mSourceUri.getPath().isEmpty()) {
+      if (sourceUri.getPath().isEmpty()) {
         throw new BuilderException("Resource URI must not be empty");
       }
       try {
-        Integer.parseInt(mSourceUri.getPath().substring(1));
+        Integer.parseInt(sourceUri.getPath().substring(1));
       } catch (NumberFormatException ignored) {
         throw new BuilderException("Resource URI path must be a resource id.");
       }
@@ -619,7 +653,7 @@ public class ImageRequestBuilder {
 
     // For local asset we require caller to specify absolute path of an asset, which will be
     // resolved by AssetManager relative to configured asset folder of an app.
-    if (UriUtil.isLocalAssetUri(mSourceUri) && !mSourceUri.isAbsolute()) {
+    if (UriUtil.isLocalAssetUri(sourceUri) && !sourceUri.isAbsolute()) {
       throw new BuilderException("Asset URI path must be absolute.");
     }
   }
