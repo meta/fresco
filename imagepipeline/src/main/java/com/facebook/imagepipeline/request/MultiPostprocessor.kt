@@ -12,9 +12,11 @@ import com.facebook.cache.common.CacheKey
 import com.facebook.cache.common.MultiCacheKey
 import com.facebook.common.references.CloseableReference
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
+import com.facebook.imagepipeline.cache.FullPostprocessorCacheKeyProvider
 
 /** Runs a list of [Postprocessor]s in sequence, each operating on the previous one's result. */
-class MultiPostprocessor(private val postprocessors: List<Postprocessor>) : BasePostprocessor() {
+class MultiPostprocessor(private val postprocessors: List<Postprocessor>) :
+    BasePostprocessor(), FullPostprocessorCacheKeyProvider {
 
   override fun getName(): String =
       "MultiPostprocessor(${postprocessors.joinToString(",") { it.name }})"
@@ -24,6 +26,18 @@ class MultiPostprocessor(private val postprocessors: List<Postprocessor>) : Base
     for (postprocessor in postprocessors) {
       // A null component key means "not cacheable"; don't fabricate a composite key.
       keys.add(postprocessor.postprocessorCacheKey ?: return null)
+    }
+    return MultiCacheKey(keys)
+  }
+
+  override fun getFullPostprocessorCacheKey(): CacheKey? {
+    val keys = ArrayList<CacheKey>(postprocessors.size)
+    for (postprocessor in postprocessors) {
+      val key =
+          if (postprocessor is FullPostprocessorCacheKeyProvider)
+              postprocessor.getFullPostprocessorCacheKey()
+          else postprocessor.postprocessorCacheKey
+      keys.add(key ?: return null)
     }
     return MultiCacheKey(keys)
   }
