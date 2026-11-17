@@ -188,24 +188,38 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
       final Executor executor,
       final boolean isFailure,
       final boolean isCancellation) {
+    final DataSourceInstrumenter instrumenter = getDataSourceInstrumenter();
+    if (instrumenter == null && canRunInline(executor)) {
+      deliverDataSubscriber(dataSubscriber, isFailure, isCancellation);
+      return;
+    }
     Runnable runnable =
         new Runnable() {
           @Override
           public void run() {
-            if (isFailure) {
-              dataSubscriber.onFailure(AbstractDataSource.this);
-            } else if (isCancellation) {
-              dataSubscriber.onCancellation(AbstractDataSource.this);
-            } else {
-              dataSubscriber.onNewResult(AbstractDataSource.this);
-            }
+            deliverDataSubscriber(dataSubscriber, isFailure, isCancellation);
           }
         };
-    final DataSourceInstrumenter instrumenter = getDataSourceInstrumenter();
     if (instrumenter != null) {
       runnable = instrumenter.decorateRunnable(runnable, "AbstractDataSource_notifyDataSubscriber");
     }
     executor.execute(runnable);
+  }
+
+  private void deliverDataSubscriber(
+      DataSubscriber<T> dataSubscriber, boolean isFailure, boolean isCancellation) {
+    if (isFailure) {
+      dataSubscriber.onFailure(this);
+    } else if (isCancellation) {
+      dataSubscriber.onCancellation(this);
+    } else {
+      dataSubscriber.onNewResult(this);
+    }
+  }
+
+  private static boolean canRunInline(Executor executor) {
+    return executor instanceof InlineDataSourceExecutor
+        && ((InlineDataSourceExecutor) executor).canRunInline();
   }
 
   private synchronized boolean wasCancelled() {
@@ -352,7 +366,15 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
   protected void notifyProgressUpdate() {
     for (Pair<DataSubscriber<T>, Executor> pair : mSubscribers) {
       final DataSubscriber<T> subscriber = pair.first;
+      if (subscriber instanceof ProgressDataSubscriber
+          && !((ProgressDataSubscriber<?>) subscriber).shouldNotifyProgress()) {
+        continue;
+      }
       Executor executor = pair.second;
+      if (canRunInline(executor)) {
+        subscriber.onProgressUpdate(this);
+        continue;
+      }
       executor.execute(
           new Runnable() {
             @Override

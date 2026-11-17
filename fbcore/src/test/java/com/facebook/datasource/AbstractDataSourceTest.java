@@ -12,6 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import org.junit.Before;
@@ -297,6 +299,179 @@ public class AbstractDataSourceTest {
     mDataSource.close();
     subscribe();
     verifySubscribers(NO_INTERACTIONS);
+  }
+
+  @Test
+  public void testInlineExecutor_ResultAndCompletedSubscriptionAvoidExecute() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    mDataSource.setResult(mock(Value.class), LAST);
+    mDataSource.subscribe(mDataSubscriber2, executor);
+
+    verify(mDataSubscriber1).onNewResult(mDataSource);
+    verify(mDataSubscriber2).onNewResult(mDataSource);
+    assertThat(executor.commands).isEmpty();
+  }
+
+  @Test
+  public void testInlineExecutor_FailureAvoidsExecute() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    mDataSource.setFailure(new IllegalStateException("failure"));
+
+    verify(mDataSubscriber1).onFailure(mDataSource);
+    assertThat(executor.commands).isEmpty();
+  }
+
+  @Test
+  public void testInlineExecutor_CancellationAvoidsExecute() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    mDataSource.close();
+
+    verify(mDataSubscriber1).onCancellation(mDataSource);
+    assertThat(executor.commands).isEmpty();
+  }
+
+  @Test
+  public void testInlineExecutor_ProgressAvoidsExecute() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    mDataSource.setProgress(0.5f);
+
+    verify(mDataSubscriber1).onProgressUpdate(mDataSource);
+    assertThat(executor.commands).isEmpty();
+  }
+
+  @Test
+  public void testInlineExecutor_DisallowedInlineDeliveryKeepsDispatch() {
+    InlineTestExecutor executor = new InlineTestExecutor(false);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    mDataSource.setResult(mock(Value.class), INTERMEDIATE);
+
+    verifyNoMoreInteractions(mDataSubscriber1);
+    assertThat(executor.commands).hasSize(1);
+    executor.commands.get(0).run();
+    verify(mDataSubscriber1).onNewResult(mDataSource);
+  }
+
+  @Test
+  public void testInlineExecutor_InstrumenterKeepsDecoratedDispatch() {
+    List<String> tags = new ArrayList<>();
+    List<String> events = new ArrayList<>();
+    AbstractDataSource.provideInstrumenter(
+        (runnable, tag) -> {
+          tags.add(tag);
+          return () -> {
+            events.add("decorated");
+            runnable.run();
+          };
+        });
+    try {
+      InlineTestExecutor executor = new InlineTestExecutor(true);
+      mDataSource.subscribe(mDataSubscriber1, executor);
+      mDataSource.setResult(mock(Value.class), LAST);
+
+      assertThat(executor.commands).hasSize(1);
+      assertThat(tags).containsExactly("AbstractDataSource_notifyDataSubscriber");
+      assertThat(events).containsExactly("decorated");
+      verify(mDataSubscriber1).onNewResult(mDataSource);
+    } finally {
+      AbstractDataSource.provideInstrumenter(null);
+    }
+  }
+
+  @Test
+  public void testProgressPreferenceSkipsDispatchButStoresProgress() {
+    ProgressDataSubscriber<Value> subscriber = mock(ProgressDataSubscriber.class);
+    when(subscriber.shouldNotifyProgress()).thenReturn(false, true);
+    InlineTestExecutor executor = new InlineTestExecutor(false);
+    mDataSource.subscribe(subscriber, executor);
+
+    mDataSource.setProgress(0.5f);
+    assertThat(mDataSource.getProgress()).isEqualTo(0.5f);
+    assertThat(executor.commands).isEmpty();
+    verify(subscriber, never()).onProgressUpdate(any());
+
+    mDataSource.setProgress(0.75f);
+    assertThat(executor.commands).hasSize(1);
+    executor.commands.get(0).run();
+    verify(subscriber).onProgressUpdate(mDataSource);
+  }
+
+  @Test
+  public void testProgressPreferenceDoesNotSuppressResultOrFailure() {
+    ProgressDataSubscriber<Value> subscriber = mock(ProgressDataSubscriber.class);
+    when(subscriber.shouldNotifyProgress()).thenReturn(false);
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(subscriber, executor);
+
+    mDataSource.setResult(mock(Value.class), INTERMEDIATE);
+    mDataSource.setFailure(new IllegalStateException("failure"));
+
+    verify(subscriber).onNewResult(mDataSource);
+    verify(subscriber).onFailure(mDataSource);
+    assertThat(executor.commands).isEmpty();
+  }
+
+  @Test
+  public void testInlineCallbackCanCloseReentrantlyOutsideMonitor() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    doAnswer(
+            invocation -> {
+              assertThat(Thread.holdsLock(mDataSource)).isFalse();
+              mDataSource.close();
+              return null;
+            })
+        .when(mDataSubscriber1)
+        .onNewResult(mDataSource);
+
+    mDataSource.setResult(mock(Value.class), INTERMEDIATE);
+
+    org.mockito.InOrder order = inOrder(mDataSubscriber1);
+    order.verify(mDataSubscriber1).onNewResult(mDataSource);
+    order.verify(mDataSubscriber1).onCancellation(mDataSource);
+    assertThat(executor.commands).isEmpty();
+    assertThat(mDataSource.isClosed()).isTrue();
+  }
+
+  @Test
+  public void testInlineCallbackExceptionPropagatesWithoutResubmission() {
+    InlineTestExecutor executor = new InlineTestExecutor(true);
+    IllegalStateException failure = new IllegalStateException("callback failure");
+    mDataSource.subscribe(mDataSubscriber1, executor);
+    doThrow(failure).when(mDataSubscriber1).onNewResult(mDataSource);
+
+    try {
+      mDataSource.setResult(mock(Value.class), LAST);
+      org.junit.Assert.fail("Expected callback failure");
+    } catch (IllegalStateException caught) {
+      assertThat(caught).isSameAs(failure);
+    }
+    assertThat(executor.commands).isEmpty();
+  }
+
+  private static class InlineTestExecutor implements InlineDataSourceExecutor {
+    private final boolean inline;
+    final List<Runnable> commands = new ArrayList<>();
+
+    InlineTestExecutor(boolean inline) {
+      this.inline = inline;
+    }
+
+    @Override
+    public boolean canRunInline() {
+      return inline;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+      commands.add(command);
+      if (inline) {
+        command.run();
+      }
+    }
   }
 
   @Test
