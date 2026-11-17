@@ -55,7 +55,8 @@ public class BaseProducerContext implements ProducerContext {
   private boolean mIsCancelled;
 
   @GuardedBy("this")
-  private final List<ProducerContextCallbacks> mCallbacks;
+  @Nullable
+  private List<ProducerContextCallbacks> mCallbacks;
 
   @Nullable private final ImagePipelineConfigInterface mImagePipelineConfig;
 
@@ -116,7 +117,6 @@ public class BaseProducerContext implements ProducerContext {
     mIsIntermediateResultExpected = isIntermediateResultExpected;
 
     mIsCancelled = false;
-    mCallbacks = new ArrayList<>();
 
     mImagePipelineConfig = imagePipelineConfig;
   }
@@ -174,6 +174,9 @@ public class BaseProducerContext implements ProducerContext {
   public void addCallbacks(ProducerContextCallbacks callbacks) {
     boolean cancelImmediately = false;
     synchronized (this) {
+      if (mCallbacks == null) {
+        mCallbacks = new ArrayList<>();
+      }
       mCallbacks.add(callbacks);
       if (mIsCancelled) {
         cancelImmediately = true;
@@ -226,7 +229,7 @@ public class BaseProducerContext implements ProducerContext {
       return null;
     }
     this.mIsPrefetch = isPrefetch;
-    return new ArrayList<>(mCallbacks);
+    return mCallbacks == null ? new ArrayList<>() : new ArrayList<>(mCallbacks);
   }
 
   /**
@@ -244,7 +247,7 @@ public class BaseProducerContext implements ProducerContext {
       return null;
     }
     this.mPriority = priority;
-    return new ArrayList<>(mCallbacks);
+    return mCallbacks == null ? new ArrayList<>() : new ArrayList<>(mCallbacks);
   }
 
   /**
@@ -263,7 +266,7 @@ public class BaseProducerContext implements ProducerContext {
       return null;
     }
     this.mIsIntermediateResultExpected = isIntermediateResultExpected;
-    return new ArrayList<>(mCallbacks);
+    return mCallbacks == null ? new ArrayList<>() : new ArrayList<>(mCallbacks);
   }
 
   /**
@@ -281,7 +284,7 @@ public class BaseProducerContext implements ProducerContext {
       return null;
     }
     mIsCancelled = true;
-    return new ArrayList<>(mCallbacks);
+    return mCallbacks == null ? new ArrayList<>() : new ArrayList<>(mCallbacks);
   }
 
   /**

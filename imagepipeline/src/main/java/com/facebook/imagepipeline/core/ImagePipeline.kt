@@ -96,6 +96,8 @@ class ImagePipeline(
 
   private val requestListener: RequestListener = ForwardingRequestListener(requestListeners)
   private val requestListener2: RequestListener2 = ForwardingRequestListener2(requestListener2s)
+  private val internalRequestListener = InternalRequestListener(requestListener, requestListener2)
+  private val internalRequestListener2 = InternalRequestListener(null, requestListener2)
 
   /** @return The Bitmap MemoryCache */
   val bitmapMemoryCache: MemoryCache<CacheKey, CloseableImage>
@@ -1196,9 +1198,8 @@ class ImagePipeline(
       extras: Map<String, *>?,
   ): DataSource<CloseableReference<T>> =
       traceSection("ImagePipeline#submitFetchRequest") {
-        val requestListener2 = InternalRequestListener(
+        val requestListener2 = getInternalRequestListener(
             getRequestListenerForRequest(imageRequest, requestListener),
-            requestListener2,
         )
         callerContextVerifier?.verifyCallerContext(callerContext, false)
         return try {
@@ -1238,7 +1239,7 @@ class ImagePipeline(
   ): DataSource<CloseableReference<T>> =
       traceSection("ImagePipeline#submitFetchRequest") {
         return try {
-          val requestListener2 = InternalRequestListener(requestListener, requestListener2)
+          val requestListener2 = getInternalRequestListener(requestListener)
           CloseableProducerToDataSourceAdapter.create(
               producerSequence,
               settableProducerContext,
@@ -1259,9 +1260,8 @@ class ImagePipeline(
       extras: Map<String, *>?,
       prefetchDestination: String,
   ): DataSource<Void?> {
-    val requestListener2 = InternalRequestListener(
+    val requestListener2 = getInternalRequestListener(
         getRequestListenerForRequest(imageRequest, requestListener),
-        requestListener2,
     )
     callerContextVerifier?.verifyCallerContext(callerContext, true)
     val originalUri = imageRequest.sourceUri
@@ -1302,6 +1302,13 @@ class ImagePipeline(
       DataSources.immediateFailedDataSource(exception)
     }
   }
+
+  private fun getInternalRequestListener(listener: RequestListener?): InternalRequestListener =
+      when {
+        listener === requestListener -> internalRequestListener
+        listener == null -> internalRequestListener2
+        else -> InternalRequestListener(listener, requestListener2)
+      }
 
   fun getRequestListenerForRequest(
       imageRequest: ImageRequest?,

@@ -59,7 +59,7 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
   @GuardedBy("this")
   private float mProgress = 0;
 
-  private final ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> mSubscribers;
+  @Nullable private volatile ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> mSubscribers;
 
   @Nullable private static volatile DataSourceInstrumenter sDataSourceInstrumenter;
 
@@ -70,7 +70,6 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
   protected AbstractDataSource() {
     mIsClosed = false;
     mDataSourceStatus = DataSourceStatus.IN_PROGRESS;
-    mSubscribers = new ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>>();
   }
 
   @Override
@@ -137,7 +136,10 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
       notifyDataSubscribers();
     }
     synchronized (this) {
-      mSubscribers.clear();
+      ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> subscribers = mSubscribers;
+      if (subscribers != null) {
+        subscribers.clear();
+      }
     }
     return true;
   }
@@ -164,7 +166,12 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
       }
 
       if (mDataSourceStatus == DataSourceStatus.IN_PROGRESS) {
-        mSubscribers.add(Pair.create(dataSubscriber, executor));
+        ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> subscribers = mSubscribers;
+        if (subscribers == null) {
+          subscribers = new ConcurrentLinkedQueue<>();
+          mSubscribers = subscribers;
+        }
+        subscribers.add(Pair.create(dataSubscriber, executor));
       }
 
       shouldNotify = hasResult() || isFinished() || wasCancelled();
@@ -178,7 +185,11 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
   private void notifyDataSubscribers() {
     final boolean isFailure = hasFailed();
     final boolean isCancellation = wasCancelled();
-    for (Pair<DataSubscriber<T>, Executor> pair : mSubscribers) {
+    ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> subscribers = mSubscribers;
+    if (subscribers == null) {
+      return;
+    }
+    for (Pair<DataSubscriber<T>, Executor> pair : subscribers) {
       notifyDataSubscriber(pair.first, pair.second, isFailure, isCancellation);
     }
   }
@@ -364,7 +375,11 @@ public abstract class AbstractDataSource<T> implements DataSource<T> {
   }
 
   protected void notifyProgressUpdate() {
-    for (Pair<DataSubscriber<T>, Executor> pair : mSubscribers) {
+    ConcurrentLinkedQueue<Pair<DataSubscriber<T>, Executor>> subscribers = mSubscribers;
+    if (subscribers == null) {
+      return;
+    }
+    for (Pair<DataSubscriber<T>, Executor> pair : subscribers) {
       final DataSubscriber<T> subscriber = pair.first;
       if (subscriber instanceof ProgressDataSubscriber
           && !((ProgressDataSubscriber<?>) subscriber).shouldNotifyProgress()) {

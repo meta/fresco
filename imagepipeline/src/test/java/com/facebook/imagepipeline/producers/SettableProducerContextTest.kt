@@ -10,6 +10,10 @@ package com.facebook.imagepipeline.producers
 import com.facebook.imagepipeline.common.Priority
 import com.facebook.imagepipeline.core.ImagePipelineConfig
 import com.facebook.imagepipeline.request.ImageRequest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Test
@@ -117,6 +121,192 @@ class SettableProducerContextTest {
     settableProducerContext.addCallbacks(callbacks2)
     Mockito.verify(callbacks2).onCancellationRequested()
     Mockito.verify(callbacks2, Mockito.never()).onIsPrefetchChanged()
+  }
+
+  @Test
+  fun emptyCallbackSnapshotsRemainMutableAndIndependent() {
+    val snapshots = listOf(
+        settableProducerContext.setIsPrefetchNoCallbacks(true),
+        settableProducerContext.setPriorityNoCallbacks(Priority.HIGH),
+        settableProducerContext.setIsIntermediateResultExpectedNoCallbacks(false),
+        settableProducerContext.cancelNoCallbacks(),
+    )
+    for (snapshot in snapshots) {
+      assertThat(snapshot).isNotNull().isEmpty()
+      snapshot?.add(callbacks1)
+    }
+    for (snapshot in snapshots) {
+      assertThat(snapshot).containsExactly(callbacks1)
+    }
+    assertThat(settableProducerContext.cancelNoCallbacks()).isNull()
+    assertThat(settableProducerContext.setIsPrefetchNoCallbacks(false)).isEmpty()
+    assertThat(settableProducerContext.setPriorityNoCallbacks(Priority.LOW)).isEmpty()
+    assertThat(settableProducerContext.setIsIntermediateResultExpectedNoCallbacks(true)).isEmpty()
+  }
+
+  @Test
+  fun cancellationPreservesOrderAndAllowsReentrantRegistrationOutsideMonitor() {
+    val events = mutableListOf<String>()
+    val lateCallback =
+        object : BaseProducerContextCallbacks() {
+          override fun onCancellationRequested() {
+            assertThat(Thread.holdsLock(settableProducerContext)).isFalse()
+            events.add("late")
+          }
+        }
+    settableProducerContext.addCallbacks(
+        object : BaseProducerContextCallbacks() {
+          override fun onCancellationRequested() {
+            assertThat(Thread.holdsLock(settableProducerContext)).isFalse()
+            events.add("first")
+            settableProducerContext.addCallbacks(lateCallback)
+            settableProducerContext.cancel()
+          }
+        },
+    )
+    settableProducerContext.addCallbacks(
+        object : BaseProducerContextCallbacks() {
+          override fun onCancellationRequested() {
+            assertThat(Thread.holdsLock(settableProducerContext)).isFalse()
+            events.add("second")
+          }
+        },
+    )
+
+    settableProducerContext.cancel()
+    settableProducerContext.cancel()
+
+    assertThat(events).containsExactly("first", "late", "second")
+  }
+
+  @Test
+  fun callbacksAddedAfterEmptyCancellationStillReceivePropertyChanges() {
+    settableProducerContext.cancel()
+    settableProducerContext.addCallbacks(callbacks1)
+    settableProducerContext.cancel()
+    settableProducerContext.setIsPrefetch(true)
+    settableProducerContext.setPriority(Priority.HIGH)
+    settableProducerContext.setIsIntermediateResultExpected(false)
+
+    Mockito.verify(callbacks1).onCancellationRequested()
+    Mockito.verify(callbacks1).onIsPrefetchChanged()
+    Mockito.verify(callbacks1).onPriorityChanged()
+    Mockito.verify(callbacks1).onIsIntermediateResultExpectedChanged()
+    Mockito.verifyNoMoreInteractions(callbacks1)
+  }
+
+  @Test
+  fun snapshotsDoNotIncludeLaterRegistrationsOrMutateCallbackStorage() {
+    settableProducerContext.addCallbacks(callbacks1)
+    val prefetchSnapshot = settableProducerContext.setIsPrefetchNoCallbacks(true)
+    val prioritySnapshot = settableProducerContext.setPriorityNoCallbacks(Priority.HIGH)
+    val intermediateSnapshot =
+        settableProducerContext.setIsIntermediateResultExpectedNoCallbacks(false)
+    val cancellationSnapshot = settableProducerContext.cancelNoCallbacks()
+    settableProducerContext.addCallbacks(callbacks2)
+
+    for (snapshot in
+        listOf(
+            prefetchSnapshot,
+            prioritySnapshot,
+            intermediateSnapshot,
+            cancellationSnapshot,
+        )) {
+      assertThat(snapshot).containsExactly(callbacks1)
+      snapshot?.clear()
+    }
+    settableProducerContext.setIsPrefetch(false)
+    settableProducerContext.setPriority(Priority.LOW)
+    settableProducerContext.setIsIntermediateResultExpected(true)
+
+    Mockito.verify(callbacks1).onIsPrefetchChanged()
+    Mockito.verify(callbacks2).onIsPrefetchChanged()
+    Mockito.verify(callbacks1).onPriorityChanged()
+    Mockito.verify(callbacks2).onPriorityChanged()
+    Mockito.verify(callbacks1).onIsIntermediateResultExpectedChanged()
+    Mockito.verify(callbacks2).onIsIntermediateResultExpectedChanged()
+    Mockito.verify(callbacks2).onCancellationRequested()
+    Mockito.verify(callbacks1, Mockito.never()).onCancellationRequested()
+  }
+
+  @Test
+  fun cancellingOneContextDoesNotCancelItsCopy() {
+    val copy = SettableProducerContext(settableProducerContext)
+    settableProducerContext.addCallbacks(callbacks1)
+    copy.addCallbacks(callbacks2)
+
+    settableProducerContext.cancel()
+
+    assertThat(copy.isCancelled).isFalse()
+    Mockito.verify(callbacks1).onCancellationRequested()
+    Mockito.verifyNoInteractions(callbacks2)
+    copy.cancel()
+    Mockito.verify(callbacks2).onCancellationRequested()
+  }
+
+  @Test
+  fun cancellationExceptionDoesNotChangeSnapshotOrLateRegistrationSemantics() {
+    val failure = IllegalStateException("callback failure")
+    settableProducerContext.addCallbacks(
+        object : BaseProducerContextCallbacks() {
+          override fun onCancellationRequested() {
+            throw failure
+          }
+        },
+    )
+    settableProducerContext.addCallbacks(callbacks1)
+    var caught: Throwable? = null
+    try {
+      settableProducerContext.cancel()
+    } catch (throwable: IllegalStateException) {
+      caught = throwable
+    }
+
+    assertThat(caught).isSameAs(failure)
+    assertThat(settableProducerContext.isCancelled).isTrue()
+    settableProducerContext.cancel()
+    settableProducerContext.addCallbacks(callbacks2)
+    Mockito.verify(callbacks1, Mockito.never()).onCancellationRequested()
+    Mockito.verify(callbacks2).onCancellationRequested()
+  }
+
+  @Test(timeout = 30000)
+  fun concurrentRegistrationAndCancellationNotifyEachCallbackExactlyOnce() {
+    val executor = Executors.newFixedThreadPool(3)
+    try {
+      repeat(200) {
+        val context = SettableProducerContext(settableProducerContext)
+        val start = CountDownLatch(1)
+        val counts = List(16) { AtomicInteger() }
+        val callbacks = counts.map { count ->
+          object : BaseProducerContextCallbacks() {
+            override fun onCancellationRequested() {
+              assertThat(Thread.holdsLock(context)).isFalse()
+              count.incrementAndGet()
+            }
+          }
+        }
+        val registrations = executor.submit {
+          assertThat(start.await(5, TimeUnit.SECONDS)).isTrue()
+          callbacks.forEach { context.addCallbacks(it) }
+        }
+        val cancellations =
+            List(2) {
+              executor.submit {
+                assertThat(start.await(5, TimeUnit.SECONDS)).isTrue()
+                context.cancel()
+              }
+            }
+        start.countDown()
+        registrations.get(5, TimeUnit.SECONDS)
+        cancellations.forEach { it.get(5, TimeUnit.SECONDS) }
+        assertThat(context.isCancelled).isTrue()
+        assertThat(counts.map { it.get() }).containsOnly(1)
+      }
+    } finally {
+      executor.shutdownNow()
+      assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue()
+    }
   }
 
   @Test

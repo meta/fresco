@@ -42,6 +42,7 @@ import com.facebook.imagepipeline.listener.RequestListener2;
 import com.facebook.imagepipeline.producers.Consumer;
 import com.facebook.imagepipeline.producers.Producer;
 import com.facebook.imagepipeline.producers.ProducerContext;
+import com.facebook.imagepipeline.producers.SettableProducerContext;
 import com.facebook.imagepipeline.producers.ThreadHandoffProducerQueue;
 import com.facebook.imagepipeline.request.ImageRequest;
 import com.facebook.infer.annotation.Nullsafe;
@@ -85,6 +86,7 @@ public class ImagePipelineTest {
   private Map<String, BufferedDiskCache> mDynamicBufferedDiskCaches;
   private RequestListener mRequestListener1;
   private RequestListener mRequestListener2;
+  private RequestListener2 mRequestListenerV2;
   private ThreadHandoffProducerQueue mThreadHandoffProducerQueue;
 
   @Before
@@ -98,6 +100,7 @@ public class ImagePipelineTest {
     when(mLazyDataSourceSupplier.get()).thenReturn(false);
     mRequestListener1 = mock(RequestListener.class);
     mRequestListener2 = mock(RequestListener.class);
+    mRequestListenerV2 = mock(RequestListener2.class);
     mBitmapMemoryCache = mock(MemoryCache.class);
     mEncodedMemoryCache = mock(MemoryCache.class);
     mMainDiskStorageCache = mock(BufferedDiskCache.class);
@@ -126,7 +129,7 @@ public class ImagePipelineTest {
         new ImagePipeline(
             mProducerSequenceFactory,
             Sets.newHashSet(mRequestListener1, mRequestListener2),
-            Sets.newHashSet(mock(RequestListener2.class)),
+            Sets.newHashSet(mRequestListenerV2),
             mPrefetchEnabledSupplier,
             mBitmapMemoryCache,
             mEncodedMemoryCache,
@@ -857,6 +860,171 @@ public class ImagePipelineTest {
     verify(mMainDiskStorageCache).getSize();
     verify(mSmallImageDiskStorageCache).getSize();
     verify(mDynamicBufferedDiskCache).getSize();
+  }
+
+  @Test
+  public void testFetchAndPrefetchReuseGlobalAdapterWithoutSharingRequestContext() {
+    Producer<CloseableReference<CloseableImage>> decoded = mock(Producer.class);
+    Producer<CloseableReference<PooledByteBuffer>> encoded = mock(Producer.class);
+    Producer<Void> prefetch = mock(Producer.class);
+    when(mProducerSequenceFactory.getDecodedImageProducerSequence(mImageRequest))
+        .thenReturn(decoded);
+    when(mProducerSequenceFactory.getEncodedImageProducerSequence(mImageRequest))
+        .thenReturn(encoded);
+    when(mProducerSequenceFactory.getEncodedImagePrefetchProducerSequence(mImageRequest))
+        .thenReturn(prefetch);
+    Object encodedCaller = new Object();
+    DataSource<CloseableReference<CloseableImage>> decodedDataSource =
+        mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext);
+    DataSource<CloseableReference<PooledByteBuffer>> encodedDataSource =
+        mImagePipeline.fetchEncodedImage(mImageRequest, encodedCaller);
+    DataSource<Void> prefetchDataSource =
+        mImagePipeline.prefetchToDiskCache(mImageRequest, mCallerContext);
+    try {
+      ProducerContext decodedContext = captureContext(decoded);
+      ProducerContext encodedContext = captureContext(encoded);
+      ProducerContext prefetchContext = captureContext(prefetch);
+      assertThat(decodedContext.getProducerListener())
+          .isSameAs(encodedContext.getProducerListener());
+      assertThat(decodedContext.getProducerListener())
+          .isSameAs(prefetchContext.getProducerListener());
+      assertThat(decodedContext).isNotSameAs(encodedContext).isNotSameAs(prefetchContext);
+      assertThat(decodedContext.getId()).isEqualTo("0");
+      assertThat(encodedContext.getId()).isEqualTo("1");
+      assertThat(prefetchContext.getId()).isEqualTo("2");
+      assertThat(encodedContext.getCallerContext()).isSameAs(encodedCaller);
+      assertThat(decodedContext.isPrefetch()).isFalse();
+      assertThat(prefetchContext.isPrefetch()).isTrue();
+      decodedContext.putExtra("request-only", "decoded");
+      assertThat(encodedContext.<String>getExtra("request-only")).isNull();
+      assertThat(prefetchContext.<String>getExtra("request-only")).isNull();
+      verify(mRequestListenerV2).onRequestStart(decodedContext);
+      verify(mRequestListenerV2).onRequestStart(encodedContext);
+      verify(mRequestListenerV2).onRequestStart(prefetchContext);
+
+      decodedDataSource.close();
+      assertThat(encodedDataSource.isClosed()).isFalse();
+      assertThat(prefetchDataSource.isClosed()).isFalse();
+      verify(mRequestListener1).onRequestCancellation("0");
+      verify(mRequestListenerV2).onRequestCancellation(decodedContext);
+    } finally {
+      decodedDataSource.close();
+      encodedDataSource.close();
+      prefetchDataSource.close();
+    }
+  }
+
+  @Test
+  public void testRequestSpecificAdaptersRemainIsolatedAndPreserveListenerOrder() {
+    Producer<CloseableReference<CloseableImage>> decoded = mock(Producer.class);
+    when(mProducerSequenceFactory.getDecodedImageProducerSequence(mImageRequest))
+        .thenReturn(decoded);
+    RequestListener local = mock(RequestListener.class);
+    RequestListener supplied = mock(RequestListener.class);
+    List<DataSource<CloseableReference<CloseableImage>>> dataSources = new ArrayList<>();
+    try {
+      dataSources.add(mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext));
+      when(mImageRequest.getRequestListener()).thenReturn(local);
+      dataSources.add(mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext));
+      when(mImageRequest.getRequestListener()).thenReturn(null);
+      dataSources.add(mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext, supplied));
+      when(mImageRequest.getRequestListener()).thenReturn(local);
+      dataSources.add(mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext, supplied));
+      when(mImageRequest.getRequestListener()).thenReturn(null);
+      dataSources.add(mImagePipeline.fetchDecodedImage(mImageRequest, mCallerContext));
+
+      ArgumentCaptor<ProducerContext> contexts = ArgumentCaptor.forClass(ProducerContext.class);
+      verify(decoded, times(5)).produceResults(any(Consumer.class), contexts.capture());
+      List<ProducerContext> values = contexts.getAllValues();
+      assertThat(values.get(0).getProducerListener()).isSameAs(values.get(4).getProducerListener());
+      for (int i = 1; i < 4; i++) {
+        assertThat(values.get(i).getProducerListener())
+            .isNotSameAs(values.get(0).getProducerListener());
+        for (int j = 1; j < i; j++) {
+          assertThat(values.get(i).getProducerListener())
+              .isNotSameAs(values.get(j).getProducerListener());
+        }
+      }
+      for (int i = 0; i < 5; i++) {
+        ((RequestListener2) values.get(i).getProducerListener()).onRequestSuccess(values.get(i));
+        verify(mRequestListener1).onRequestSuccess(mImageRequest, Integer.toString(i), false);
+        verify(mRequestListenerV2).onRequestSuccess(values.get(i));
+      }
+      verify(local).onRequestSuccess(mImageRequest, "1", false);
+      verify(local).onRequestSuccess(mImageRequest, "3", false);
+      verify(local, never()).onRequestSuccess(mImageRequest, "0", false);
+      verify(local, never()).onRequestSuccess(mImageRequest, "2", false);
+      verify(local, never()).onRequestSuccess(mImageRequest, "4", false);
+      verify(supplied).onRequestSuccess(mImageRequest, "2", false);
+      verify(supplied).onRequestSuccess(mImageRequest, "3", false);
+      verify(supplied, never()).onRequestSuccess(mImageRequest, "0", false);
+      verify(supplied, never()).onRequestSuccess(mImageRequest, "1", false);
+      verify(supplied, never()).onRequestSuccess(mImageRequest, "4", false);
+      org.mockito.InOrder order = org.mockito.Mockito.inOrder(supplied, local, mRequestListenerV2);
+      order.verify(supplied).onRequestStart(mImageRequest, mCallerContext, "3", false);
+      order.verify(local).onRequestStart(mImageRequest, mCallerContext, "3", false);
+      order.verify(mRequestListenerV2).onRequestStart(values.get(3));
+    } finally {
+      for (DataSource<?> dataSource : dataSources) {
+        dataSource.close();
+      }
+    }
+  }
+
+  @Test
+  public void testPrefetchWithSpecificListenerDoesNotReuseGlobalAdapter() {
+    Producer<Void> prefetch = mock(Producer.class);
+    when(mProducerSequenceFactory.getEncodedImagePrefetchProducerSequence(mImageRequest))
+        .thenReturn(prefetch);
+    RequestListener local = mock(RequestListener.class);
+    DataSource<Void> first = mImagePipeline.prefetchToDiskCache(mImageRequest, mCallerContext);
+    when(mImageRequest.getRequestListener()).thenReturn(local);
+    DataSource<Void> second = mImagePipeline.prefetchToDiskCache(mImageRequest, mCallerContext);
+    try {
+      ArgumentCaptor<ProducerContext> contexts = ArgumentCaptor.forClass(ProducerContext.class);
+      verify(prefetch, times(2)).produceResults(any(Consumer.class), contexts.capture());
+      assertThat(contexts.getAllValues().get(0).getProducerListener())
+          .isNotSameAs(contexts.getAllValues().get(1).getProducerListener());
+      verify(local).onRequestStart(mImageRequest, mCallerContext, "1", true);
+      verify(local, never()).onRequestStart(mImageRequest, mCallerContext, "0", true);
+    } finally {
+      first.close();
+      second.close();
+    }
+  }
+
+  @Test
+  public void testCallerOwnedContextDoesNotAddLegacyPipelineListeners() {
+    Producer<CloseableReference<CloseableImage>> decoded = mock(Producer.class);
+    SettableProducerContext context =
+        new SettableProducerContext(
+            mImageRequest,
+            "caller-owned",
+            mRequestListenerV2,
+            mCallerContext,
+            ImageRequest.RequestLevel.FULL_FETCH,
+            false,
+            true,
+            Priority.HIGH,
+            mConfig);
+    DataSource<CloseableReference<CloseableImage>> dataSource =
+        mImagePipeline.submitFetchRequest(decoded, context, null);
+    try {
+      assertThat(dataSource.hasFailed()).isFalse();
+      verify(mRequestListenerV2).onRequestStart(context);
+      verifyNoMoreInteractions(mRequestListener1, mRequestListener2);
+      assertThat(context.getProducerListener()).isSameAs(mRequestListenerV2);
+    } finally {
+      dataSource.close();
+    }
+    verify(mRequestListenerV2).onRequestCancellation(context);
+    verifyNoMoreInteractions(mRequestListener1, mRequestListener2);
+  }
+
+  private <T> ProducerContext captureContext(Producer<T> producer) {
+    ArgumentCaptor<ProducerContext> context = ArgumentCaptor.forClass(ProducerContext.class);
+    verify(producer).produceResults(any(Consumer.class), context.capture());
+    return context.getValue();
   }
 
   @Test

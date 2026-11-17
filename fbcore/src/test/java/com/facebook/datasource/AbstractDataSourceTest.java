@@ -14,7 +14,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import org.junit.Before;
 import org.junit.Test;
@@ -299,6 +301,64 @@ public class AbstractDataSourceTest {
     mDataSource.close();
     subscribe();
     verifySubscribers(NO_INTERACTIONS);
+  }
+
+  @Test
+  public void testUnsubscribedProgressAndClose() {
+    mDataSource.setProgress(0.5f);
+    assertThat(mDataSource.getProgress()).isEqualTo(0.5f);
+    assertThat(mDataSource.close()).isTrue();
+    assertThat(mDataSource.setProgress(0.75f)).isFalse();
+    assertThat(mDataSource.isClosed()).isTrue();
+  }
+
+  @Test(timeout = 30_000)
+  public void testConcurrentSubscriptionAndFinalResultDeliverExactlyOnce() throws Exception {
+    for (int iteration = 0; iteration < 100; iteration++) {
+      FakeAbstractDataSource source = new FakeAbstractDataSource();
+      DataSubscriber<Value> subscriber = mock(DataSubscriber.class);
+      InlineTestExecutor executor = new InlineTestExecutor(true);
+      Value value = mock(Value.class);
+      CyclicBarrier start = new CyclicBarrier(2);
+      AtomicReference<Throwable> failure = new AtomicReference<>();
+      Thread subscribeThread =
+          concurrentWorker(start, failure, () -> source.subscribe(subscriber, executor));
+      Thread resultThread = concurrentWorker(start, failure, () -> source.setResult(value, LAST));
+      try {
+        subscribeThread.start();
+        resultThread.start();
+        subscribeThread.join();
+        resultThread.join();
+        if (failure.get() != null) {
+          throw new AssertionError("Concurrent worker failed", failure.get());
+        }
+        verify(subscriber).onNewResult(source);
+        assertThat(executor.commands).isEmpty();
+      } finally {
+        subscribeThread.interrupt();
+        resultThread.interrupt();
+        if (!subscribeThread.isAlive() && !resultThread.isAlive()) {
+          source.close();
+        }
+      }
+      verify(value).close();
+    }
+  }
+
+  private static Thread concurrentWorker(
+      CyclicBarrier start, AtomicReference<Throwable> failure, Runnable action) {
+    Thread thread =
+        new Thread(
+            () -> {
+              try {
+                start.await();
+                action.run();
+              } catch (Throwable error) {
+                failure.compareAndSet(null, error);
+              }
+            });
+    thread.setDaemon(true);
+    return thread;
   }
 
   @Test
