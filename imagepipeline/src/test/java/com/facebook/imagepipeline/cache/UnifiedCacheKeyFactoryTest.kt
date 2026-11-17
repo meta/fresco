@@ -67,6 +67,149 @@ class UnifiedCacheKeyFactoryTest {
   }
 
   @Test
+  fun releasedJvmConstructors_preserveLegacyPostprocessorKeysAndEncodedDimensions() {
+    val postprocessor =
+        object : BasePostprocessor(), FullPostprocessorCacheKeyProvider {
+          override fun getPostprocessorCacheKey() = SimpleCacheKey("legacy")
+
+          override fun getFullPostprocessorCacheKey() = SimpleCacheKey("full")
+        }
+    val request =
+        ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image"))
+            .setPostprocessor(postprocessor)
+            .build()
+    val threeArgumentFactory =
+        UnifiedCacheKeyFactory::class
+            .java
+            .getConstructor(
+                UriNormalizer::class.java,
+                CacheKeyConfig::class.java,
+                Boolean::class.javaPrimitiveType,
+            )
+            .newInstance(normalizer, config, false)
+    val encodedDimensions =
+        object : DimensionExtractor {
+          override fun extractDimensions(
+              request: com.facebook.imagepipeline.request.ImageRequest,
+              sourceUri: Uri,
+              callerContext: Any?,
+          ) = 10 to 20
+        }
+    val fourArgumentFactory =
+        UnifiedCacheKeyFactory::class
+            .java
+            .getConstructor(
+                UriNormalizer::class.java,
+                CacheKeyConfig::class.java,
+                Boolean::class.javaPrimitiveType,
+                DimensionExtractor::class.java,
+            )
+            .newInstance(normalizer, config, false, encodedDimensions)
+
+    for (releasedFactory in listOf(threeArgumentFactory, fourArgumentFactory)) {
+      assertThat(releasedFactory.getPostprocessedBitmapCacheKey(request, null))
+          .isEqualTo(
+              BitmapMemoryCacheKey(
+                  "normalized100_200",
+                  null,
+                  request.rotationOptions,
+                  request.imageDecodeOptions,
+                  SimpleCacheKey("legacy"),
+                  postprocessor.javaClass.name,
+              ),
+          )
+    }
+    assertThat(threeArgumentFactory.getEncodedCacheKey(request, null))
+        .isEqualTo(SimpleCacheKey("normalized100_200"))
+    assertThat(fourArgumentFactory.getEncodedCacheKey(request, null))
+        .isEqualTo(SimpleCacheKey("normalized10_20"))
+  }
+
+  @Test
+  fun postprocessorOverride_preservesNullAndCustomKeySemantics() {
+    val postprocessor =
+        object : BasePostprocessor() {
+          override fun getPostprocessorCacheKey() = SimpleCacheKey("legacy")
+        }
+    val request =
+        ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image"))
+            .setCustomCacheKey("custom")
+            .setPostprocessor(postprocessor)
+            .build()
+    val overrideFactory = UnifiedCacheKeyFactory(
+        normalizer,
+        config,
+        postprocessorCacheKeyOverride = { null },
+    )
+    val key = overrideFactory.getPostprocessedBitmapCacheKey(request, null)
+    assertThat(key)
+        .isEqualTo(
+            BitmapMemoryCacheKey(
+                "custom",
+                null,
+                request.rotationOptions,
+                request.imageDecodeOptions,
+                null,
+                postprocessor.javaClass.name,
+            ),
+        )
+    assertThat(key).isNotEqualTo(factory.getPostprocessedBitmapCacheKey(request, null))
+  }
+
+  @Test
+  fun postprocessorOverride_isNotCalledWithoutPostprocessor() {
+    var calls = 0
+    val overrideFactory = UnifiedCacheKeyFactory(
+        normalizer,
+        config,
+        postprocessorCacheKeyOverride = {
+          calls++
+          SimpleCacheKey("override")
+        },
+    )
+    val request =
+        ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image")).build()
+    assertThat(overrideFactory.getPostprocessedBitmapCacheKey(request, null))
+        .isEqualTo(factory.getPostprocessedBitmapCacheKey(request, null))
+    assertThat(calls).isZero()
+  }
+
+  @Test
+  fun postprocessorOverride_usesSuppliedKeyAndPreservesUnsupportedKey() {
+    val postprocessor =
+        object : BasePostprocessor() {
+          override fun getPostprocessorCacheKey() = SimpleCacheKey("legacy")
+        }
+    val request =
+        ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image"))
+            .setPostprocessor(postprocessor)
+            .build()
+    val unsupportedFactory = UnifiedCacheKeyFactory(
+        normalizer,
+        config,
+        postprocessorCacheKeyOverride = { it.postprocessorCacheKey },
+    )
+    assertThat(unsupportedFactory.getPostprocessedBitmapCacheKey(request, null))
+        .isEqualTo(factory.getPostprocessedBitmapCacheKey(request, null))
+    val overrideFactory = UnifiedCacheKeyFactory(
+        normalizer,
+        config,
+        postprocessorCacheKeyOverride = { SimpleCacheKey("override") },
+    )
+    assertThat(overrideFactory.getPostprocessedBitmapCacheKey(request, null))
+        .isEqualTo(
+            BitmapMemoryCacheKey(
+                "normalized100_200",
+                null,
+                request.rotationOptions,
+                request.imageDecodeOptions,
+                SimpleCacheKey("override"),
+                postprocessor.javaClass.name,
+            ),
+        )
+  }
+
+  @Test
   fun frescoAdapter_preservesBitmapAndEncodedKeys() {
     val resize = ResizeOptions(40, 50)
     val rotation = RotationOptions.forceRotation(90)
@@ -106,6 +249,20 @@ class UnifiedCacheKeyFactoryTest {
     val cacheKey = filteringFactory.getBitmapCacheKey(request, null) as BitmapMemoryCacheKey
 
     assertThat(cacheKey.resizeOptions).isEqualTo(resizeOptions)
+  }
+
+  @Test
+  fun frescoAdapter_separatesBitmapKeysByResizeTranscoder() {
+    fun bitmapKey(transcoder: ResizeOptions.Transcoder) =
+        factory.getBitmapCacheKey(
+            ImageRequestBuilder.newBuilderWithSource(Uri.parse("https://example.com/image.jpg"))
+                .setResizeOptions(ResizeOptions(40, 50, transcoder = transcoder))
+                .build(),
+            null,
+        )
+
+    assertThat(bitmapKey(ResizeOptions.Transcoder.NONE))
+        .isNotEqualTo(bitmapKey(ResizeOptions.Transcoder.DEFAULT))
   }
 
   @Test

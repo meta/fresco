@@ -87,13 +87,13 @@ class QualifiedResourceFetchProducerTest {
     qualifiedResourceFetchProducer.produceResults(consumer, producerContext)
     executor.runUntilIdle()
 
-    Mockito.verify<PooledByteBufferFactory?>(pooledByteBufferFactory, Mockito.times(1))
+    Mockito.verify<PooledByteBufferFactory>(pooledByteBufferFactory, Mockito.times(1))
         .newByteBuffer(ArgumentMatchers.any<InputStream?>(InputStream::class.java))
-    Mockito.verify<ContentResolver?>(contentResolver, Mockito.times(1)).openInputStream(contentUri)
+    Mockito.verify<ContentResolver>(contentResolver, Mockito.times(1)).openInputStream(contentUri)
 
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerStart(producerContext, PRODUCER_NAME)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerFinishWithSuccess(producerContext, PRODUCER_NAME, null)
   }
 

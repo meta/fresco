@@ -85,7 +85,7 @@ class GifImageDecoderTest {
         GifImage.createFromNativeMemory(
             eq(byteBuffer.nativePtr),
             eq(byteBuffer.size()),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -102,7 +102,7 @@ class GifImageDecoderTest {
     whenever(
         GifImage.createFromByteBuffer(
             ArgumentMatchers.eq(checkNotNull(byteBuffer.byteBuffer)),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -122,7 +122,7 @@ class GifImageDecoderTest {
         GifImage.createFromNativeMemory(
             eq(byteBuffer.nativePtr),
             eq(byteBuffer.size()),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -145,7 +145,7 @@ class GifImageDecoderTest {
     whenever(
         GifImage.createFromByteBuffer(
             ArgumentMatchers.eq(checkNotNull(byteBuffer.byteBuffer)),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -171,7 +171,7 @@ class GifImageDecoderTest {
         GifImage.createFromNativeMemory(
             eq(byteBuffer.nativePtr),
             eq(byteBuffer.size()),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -196,7 +196,7 @@ class GifImageDecoderTest {
     whenever(
         GifImage.createFromByteBuffer(
             ArgumentMatchers.eq(checkNotNull(byteBuffer.byteBuffer)),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)
@@ -329,7 +329,7 @@ class GifImageDecoderTest {
         GifImage.createFromNativeMemory(
             eq(byteBuffer.nativePtr),
             eq(byteBuffer.size()),
-            ArgumentMatchers.any<ImageDecodeOptions?>(ImageDecodeOptions::class.java),
+            ArgumentMatchers.any<ImageDecodeOptions>(ImageDecodeOptions::class.java),
         ),
     )
         .thenReturn(mockGifImage)

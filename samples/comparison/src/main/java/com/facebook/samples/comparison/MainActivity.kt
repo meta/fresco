@@ -50,49 +50,49 @@ import java.util.Locale
 import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
-  private var mHandler: Handler? = null
-  private var mStatsClockTickRunnable: Runnable? = null
+  private var handler: Handler? = null
+  private var statsClockTickRunnable: Runnable? = null
 
-  private var mStatsDisplay: TextView? = null
-  private var mLoaderSelect: Spinner? = null
-  private var mSourceSelect: Spinner? = null
+  private var statsDisplay: TextView? = null
+  private var loaderSelect: Spinner? = null
+  private var sourceSelect: Spinner? = null
 
-  private var mHasStoragePermissions = false
-  private var mRequestedLocalSource = false
-  private var mAllowAnimations = false
-  private var mCurrentLoaderAdapterIndex = 0
-  private var mCurrentSourceAdapterIndex = 0
+  private var hasStoragePermissions = false
+  private var requestedLocalSource = false
+  private var allowAnimations = false
+  private var currentLoaderAdapterIndex = 0
+  private var currentSourceAdapterIndex = 0
 
-  private var mCurrentAdapter: ImageListAdapter? = null
-  private var mRecyclerView: RecyclerView? = null
+  private var currentAdapter: ImageListAdapter? = null
+  private var recyclerView: RecyclerView? = null
 
-  private var mPerfListener: PerfListener? = null
+  private var perfListener: PerfListener? = null
 
-  private var mImageUrls: MutableList<String?> = ArrayList<String?>()
+  private var imageUrls: MutableList<String?> = ArrayList<String?>()
 
-  private var mUrlsLocal = false
+  private var urlsLocal = false
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
-    mRecyclerView = findViewById<View?>(R.id.image_grid) as RecyclerView
-    mRecyclerView!!.setLayoutManager(GridLayoutManager(this, COLS_NUMBER))
+    recyclerView = findViewById<View?>(R.id.image_grid) as RecyclerView
+    recyclerView!!.setLayoutManager(GridLayoutManager(this, COLS_NUMBER))
 
     minimumLoggingLevel = FLog.WARN
     Drawables.init(getResources())
 
-    mPerfListener = PerfListener()
-    mAllowAnimations = true
-    mCurrentLoaderAdapterIndex = 0
-    mCurrentSourceAdapterIndex = 0
+    perfListener = PerfListener()
+    allowAnimations = true
+    currentLoaderAdapterIndex = 0
+    currentSourceAdapterIndex = 0
     if (savedInstanceState != null) {
-      mAllowAnimations = savedInstanceState.getBoolean(EXTRA_ALLOW_ANIMATIONS)
-      mCurrentLoaderAdapterIndex = savedInstanceState.getInt(EXTRA_CURRENT_ADAPTER_INDEX)
-      mCurrentSourceAdapterIndex = savedInstanceState.getInt(EXTRA_CURRENT_SOURCE_ADAPTER_INDEX)
+      allowAnimations = savedInstanceState.getBoolean(EXTRA_ALLOW_ANIMATIONS)
+      currentLoaderAdapterIndex = savedInstanceState.getInt(EXTRA_CURRENT_ADAPTER_INDEX)
+      currentSourceAdapterIndex = savedInstanceState.getInt(EXTRA_CURRENT_SOURCE_ADAPTER_INDEX)
     }
 
-    mHandler = Handler(Looper.getMainLooper())
-    mStatsClockTickRunnable =
+    handler = Handler(Looper.getMainLooper())
+    statsClockTickRunnable =
         object : Runnable {
           override fun run() {
             updateStats()
@@ -100,11 +100,11 @@ class MainActivity : AppCompatActivity() {
           }
         }
 
-    mCurrentAdapter = null
+    currentAdapter = null
 
-    mStatsDisplay = findViewById<View?>(R.id.stats_display) as TextView
-    mLoaderSelect = findViewById<View?>(R.id.loader_select) as Spinner
-    mLoaderSelect!!.setOnItemSelectedListener(
+    statsDisplay = findViewById<View?>(R.id.stats_display) as TextView
+    loaderSelect = findViewById<View?>(R.id.loader_select) as Spinner
+    loaderSelect!!.setOnItemSelectedListener(
         object : AdapterView.OnItemSelectedListener {
           override fun onItemSelected(
               parent: AdapterView<*>?,
@@ -118,10 +118,10 @@ class MainActivity : AppCompatActivity() {
           override fun onNothingSelected(parent: AdapterView<*>?) {}
         },
     )
-    mLoaderSelect!!.setSelection(mCurrentLoaderAdapterIndex)
+    loaderSelect!!.setSelection(currentLoaderAdapterIndex)
 
-    mSourceSelect = findViewById<View?>(R.id.source_select) as Spinner
-    mSourceSelect!!.setOnItemSelectedListener(
+    sourceSelect = findViewById<View?>(R.id.source_select) as Spinner
+    sourceSelect!!.setOnItemSelectedListener(
         object : AdapterView.OnItemSelectedListener {
           override fun onItemSelected(
               parent: AdapterView<*>?,
@@ -135,23 +135,23 @@ class MainActivity : AppCompatActivity() {
           override fun onNothingSelected(parent: AdapterView<*>?) {}
         },
     )
-    mSourceSelect!!.setSelection(mCurrentSourceAdapterIndex)
+    sourceSelect!!.setSelection(currentSourceAdapterIndex)
     val storagePermission =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
           Manifest.permission.READ_MEDIA_IMAGES
         } else {
           Manifest.permission.READ_EXTERNAL_STORAGE
         }
-    mHasStoragePermissions =
+    hasStoragePermissions =
         (ContextCompat.checkSelfPermission(this, storagePermission) ==
             PackageManager.PERMISSION_GRANTED)
   }
 
   override fun onSaveInstanceState(outState: Bundle) {
     super.onSaveInstanceState(outState)
-    outState.putBoolean(EXTRA_ALLOW_ANIMATIONS, mAllowAnimations)
-    outState.putInt(EXTRA_CURRENT_ADAPTER_INDEX, mCurrentLoaderAdapterIndex)
-    outState.putInt(EXTRA_CURRENT_SOURCE_ADAPTER_INDEX, mCurrentSourceAdapterIndex)
+    outState.putBoolean(EXTRA_ALLOW_ANIMATIONS, allowAnimations)
+    outState.putInt(EXTRA_CURRENT_ADAPTER_INDEX, currentLoaderAdapterIndex)
+    outState.putInt(EXTRA_CURRENT_SOURCE_ADAPTER_INDEX, currentSourceAdapterIndex)
   }
 
   override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -160,7 +160,7 @@ class MainActivity : AppCompatActivity() {
   }
 
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-    menu.findItem(R.id.allow_animations).setChecked(mAllowAnimations)
+    menu.findItem(R.id.allow_animations).setChecked(allowAnimations)
     return super.onPrepareOptionsMenu(menu)
   }
 
@@ -187,14 +187,14 @@ class MainActivity : AppCompatActivity() {
 
   @VisibleForTesting
   fun setAllowAnimations(allowAnimations: Boolean) {
-    mAllowAnimations = allowAnimations
+    this.allowAnimations = allowAnimations
     supportInvalidateOptionsMenu()
     updateAdapter(null)
     loadUrls()
   }
 
   private fun requestStoragePermissions() {
-    if (mHasStoragePermissions) {
+    if (hasStoragePermissions) {
       return
     }
 
@@ -225,23 +225,23 @@ class MainActivity : AppCompatActivity() {
         }
     for (i in permissions.indices) {
       if (permissions[i] == storagePermission) {
-        mHasStoragePermissions = grantResults[i] == PackageManager.PERMISSION_GRANTED
-        if (mHasStoragePermissions && mRequestedLocalSource) {
-          mRequestedLocalSource = false
+        hasStoragePermissions = grantResults[i] == PackageManager.PERMISSION_GRANTED
+        if (hasStoragePermissions && requestedLocalSource) {
+          requestedLocalSource = false
           setSourceAdapter(LOCAL_INDEX)
-        } else if (!mHasStoragePermissions && mRequestedLocalSource) {
+        } else if (!hasStoragePermissions && requestedLocalSource) {
           // If the user chose to deny the permission, update the source selection to none for
           // visual consistency.
-          mSourceSelect!!.setSelection(NONE_INDEX)
+          sourceSelect!!.setSelection(NONE_INDEX)
         }
       }
     }
   }
 
   private fun resetAdapter() {
-    if (mCurrentAdapter != null) {
-      mCurrentAdapter!!.shutDown()
-      mCurrentAdapter = null
+    if (currentAdapter != null) {
+      currentAdapter!!.shutDown()
+      currentAdapter = null
       System.gc()
     }
   }
@@ -249,31 +249,31 @@ class MainActivity : AppCompatActivity() {
   private fun setLoaderAdapter(index: Int) {
     FLog.v(TAG, "onImageLoaderSelect: %d", index)
     resetAdapter()
-    mCurrentLoaderAdapterIndex = index
-    mPerfListener = PerfListener()
+    currentLoaderAdapterIndex = index
+    perfListener = PerfListener()
     when (index) {
       FRESCO_INDEX,
       FRESCO_OKHTTP_INDEX ->
-          mCurrentAdapter =
+          currentAdapter =
               FrescoAdapter(
                   this,
-                  mPerfListener,
+                  perfListener,
                   if (index == FRESCO_INDEX) ImagePipelineConfigFactory.getImagePipelineConfig(this)
                   else ImagePipelineConfigFactory.getOkHttpImagePipelineConfig(this),
               )
-      GLIDE_INDEX -> mCurrentAdapter = GlideAdapter(this, mPerfListener)
-      PICASSO_INDEX -> mCurrentAdapter = PicassoAdapter(this, mPerfListener)
-      UIL_INDEX -> mCurrentAdapter = UilAdapter(this, mPerfListener)
-      VOLLEY_INDEX -> mCurrentAdapter = VolleyAdapter(this, mPerfListener)
-      AQUERY_INDEX -> mCurrentAdapter = AQueryAdapter(this, mPerfListener)
+      GLIDE_INDEX -> currentAdapter = GlideAdapter(this, perfListener)
+      PICASSO_INDEX -> currentAdapter = PicassoAdapter(this, perfListener)
+      UIL_INDEX -> currentAdapter = UilAdapter(this, perfListener)
+      VOLLEY_INDEX -> currentAdapter = VolleyAdapter(this, perfListener)
+      AQUERY_INDEX -> currentAdapter = AQueryAdapter(this, perfListener)
       else -> {
-        mCurrentAdapter = null
+        currentAdapter = null
         return
       }
     }
-    mRecyclerView!!.setAdapter(mCurrentAdapter)
+    recyclerView!!.setAdapter(currentAdapter)
 
-    updateAdapter(mImageUrls)
+    updateAdapter(imageUrls)
 
     updateStats()
   }
@@ -281,46 +281,46 @@ class MainActivity : AppCompatActivity() {
   private fun setSourceAdapter(index: Int) {
     FLog.v(TAG, "onImageSourceSelect: %d", index)
 
-    mCurrentSourceAdapterIndex = index
+    currentSourceAdapterIndex = index
     when (index) {
-      NETWORK_INDEX -> mUrlsLocal = false
-      LOCAL_INDEX -> mUrlsLocal = true
+      NETWORK_INDEX -> urlsLocal = false
+      LOCAL_INDEX -> urlsLocal = true
       else -> {
         resetAdapter()
-        mImageUrls.clear()
+        imageUrls.clear()
         return
       }
     }
 
     loadUrls()
-    setLoaderAdapter(mCurrentLoaderAdapterIndex)
+    setLoaderAdapter(currentLoaderAdapterIndex)
   }
 
   private fun loadUrls() {
-    if (mUrlsLocal) {
-      if (!mHasStoragePermissions) {
-        mRequestedLocalSource = true
+    if (urlsLocal) {
+      if (!hasStoragePermissions) {
+        requestedLocalSource = true
         requestStoragePermissions()
         return
       }
 
       loadLocalUrls()
     } else {
-      mRequestedLocalSource = false
+      requestedLocalSource = false
       loadNetworkUrls()
     }
   }
 
   private fun scheduleNextStatsClockTick() {
-    mHandler!!.postDelayed(mStatsClockTickRunnable!!, STATS_CLOCK_INTERVAL_MS)
+    handler!!.postDelayed(statsClockTickRunnable!!, STATS_CLOCK_INTERVAL_MS)
   }
 
   private fun cancelNextStatsClockTick() {
-    mHandler!!.removeCallbacks(mStatsClockTickRunnable!!)
+    handler!!.removeCallbacks(statsClockTickRunnable!!)
   }
 
   private fun chooseImageSize(): ImageSize {
-    val layoutParams = mRecyclerView!!.getLayoutParams()
+    val layoutParams = recyclerView!!.getLayoutParams()
     if (layoutParams == null) {
       return ImageSize.LARGE_THUMBNAIL
     }
@@ -347,7 +347,7 @@ class MainActivity : AppCompatActivity() {
         ImageUrlsRequestBuilder(url)
             .addImageFormat(ImageFormat.JPEG, staticSize)
             .addImageFormat(ImageFormat.PNG, staticSize)
-    if (mAllowAnimations) {
+    if (allowAnimations) {
       builder.addImageFormat(ImageFormat.GIF, ImageSize.ORIGINAL_IMAGE)
     }
     ImageUrlsFetcher.getImageUrls(
@@ -356,9 +356,9 @@ class MainActivity : AppCompatActivity() {
           override fun onFinish(result: MutableList<String?>) {
             // If the user changes to local images before the call comes back, then this should
             // be ignored
-            if (!mUrlsLocal) {
-              mImageUrls = result
-              updateAdapter(mImageUrls)
+            if (!urlsLocal) {
+              imageUrls = result
+              updateAdapter(imageUrls)
             }
           }
         },
@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity() {
     try {
       cursor = getContentResolver().query(externalContentUri, projection, null, null, null)
 
-      mImageUrls.clear()
+      imageUrls.clear()
 
       val columnIndex = cursor!!.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
 
@@ -381,7 +381,7 @@ class MainActivity : AppCompatActivity() {
       while (cursor.moveToNext()) {
         imageId = cursor.getString(columnIndex)
         imageUri = Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, imageId)
-        mImageUrls.add(imageUri.toString())
+        imageUrls.add(imageUri.toString())
       }
     } finally {
       if (cursor != null) {
@@ -391,14 +391,14 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun updateAdapter(urls: MutableList<String?>?) {
-    if (mCurrentAdapter != null) {
-      mCurrentAdapter!!.clear()
+    if (currentAdapter != null) {
+      currentAdapter!!.clear()
       if (urls != null) {
         for (url in urls) {
-          mCurrentAdapter!!.addUrl(url)
+          currentAdapter!!.addUrl(url)
         }
       }
-      mCurrentAdapter!!.notifyDataSetChanged()
+      currentAdapter!!.notifyDataSetChanged()
     }
   }
 
@@ -412,11 +412,11 @@ class MainActivity : AppCompatActivity() {
     sb.append(" Java ")
     appendSize(sb, Debug.getNativeHeapSize())
     sb.append(" native\n")
-    appendTime(sb, "Avg wait time: ", mPerfListener!!.getAverageWaitTime(), "\n")
-    appendNumber(sb, "Requests: ", mPerfListener!!.getOutstandingRequests(), " outsdng ")
-    appendNumber(sb, "", mPerfListener!!.getCancelledRequests(), " cncld\n")
+    appendTime(sb, "Avg wait time: ", perfListener!!.getAverageWaitTime(), "\n")
+    appendNumber(sb, "Requests: ", perfListener!!.getOutstandingRequests(), " outsdng ")
+    appendNumber(sb, "", perfListener!!.getCancelledRequests(), " cncld\n")
     val message = sb.toString()
-    mStatsDisplay!!.setText(message)
+    statsDisplay!!.setText(message)
     FLog.i(TAG, message)
   }
 

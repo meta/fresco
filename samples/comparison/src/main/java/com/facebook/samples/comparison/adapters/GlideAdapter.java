@@ -9,7 +9,7 @@ package com.facebook.samples.comparison.adapters;
 
 import android.content.Context;
 import android.view.ViewGroup;
-import com.facebook.samples.comparison.configs.glide.GlideApp;
+import com.bumptech.glide.Glide;
 import com.facebook.samples.comparison.holders.GlideHolder;
 import com.facebook.samples.comparison.instrumentation.InstrumentedImageView;
 import com.facebook.samples.comparison.instrumentation.PerfListener;
@@ -29,6 +29,6 @@ public class GlideAdapter extends ImageListAdapter {
 
   @Override
   public void shutDown() {
-    GlideApp.get(getContext()).clearMemory();
+    Glide.get(getContext()).clearMemory();
   }
 }

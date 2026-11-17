@@ -7,6 +7,9 @@
 
 package com.facebook.webpsupport;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import android.app.Instrumentation;
 import android.graphics.Bitmap;
 import android.os.MemoryFile;
@@ -15,19 +18,19 @@ import com.facebook.common.internal.ByteStreams;
 import com.facebook.common.internal.Throwables;
 import com.facebook.imagepipeline.core.ImagePipelineConfig;
 import com.facebook.imagepipeline.core.ImagePipelineFactory;
+import com.facebook.infer.annotation.Initializer;
 import com.facebook.infer.annotation.Nullsafe;
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import javax.annotation.Nullable;
-import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 /** This is the test in order to directly decoding all types of webp images */
 @Nullsafe(Nullsafe.Mode.LOCAL)
-public class WebpDecodingTest extends TestCase {
+public class WebpDecodingTest {
 
   @Nullable private static Method sGetFileDescriptorMethod;
 
@@ -35,8 +38,8 @@ public class WebpDecodingTest extends TestCase {
 
   private WebpBitmapFactoryImpl mWebpBitmapFactory;
 
-  @Override
   @Before
+  @Initializer
   public void setUp() {
     mInstrumentation = InstrumentationRegistry.getInstrumentation();
     mWebpBitmapFactory = new WebpBitmapFactoryImpl();

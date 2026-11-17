@@ -7,6 +7,11 @@
 
 package com.facebook.webpsupport;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+
 import android.app.Instrumentation;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -17,6 +22,7 @@ import com.facebook.common.internal.Preconditions;
 import com.facebook.common.internal.Throwables;
 import com.facebook.imagepipeline.core.ImagePipelineConfig;
 import com.facebook.imagepipeline.core.ImagePipelineFactory;
+import com.facebook.infer.annotation.Initializer;
 import com.facebook.infer.annotation.Nullsafe;
 import java.io.File;
 import java.io.FileDescriptor;
@@ -24,18 +30,17 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import junit.framework.TestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 @Nullsafe(Nullsafe.Mode.LOCAL)
-public class WebpBitmapFactoryTest extends TestCase {
+public class WebpBitmapFactoryTest {
   private Instrumentation mInstrumentation;
 
   private WebpBitmapFactoryImpl mWebpBitmapFactory;
 
-  @Override
   @Before
+  @Initializer
   public void setUp() {
     mInstrumentation = InstrumentationRegistry.getInstrumentation();
     mWebpBitmapFactory = new WebpBitmapFactoryImpl();

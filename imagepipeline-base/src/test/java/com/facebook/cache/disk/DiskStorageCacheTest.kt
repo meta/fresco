@@ -88,7 +88,7 @@ class DiskStorageCacheTest {
     cache = createDiskCache(storage!!, false)
     cache!!.clearAll()
     Mockito.reset<CacheEventListener?>(cacheEventListener)
-    Mockito.verify<DiskTrimmableRegistry?>(diskTrimmableRegistry).registerDiskTrimmable(cache!!)
+    Mockito.verify<DiskTrimmableRegistry>(diskTrimmableRegistry).registerDiskTrimmable(cache!!)
   }
 
   private var mockedSystemClock: MockedStatic<SystemClock?>? = null
@@ -105,7 +105,7 @@ class DiskStorageCacheTest {
         DefaultEntryEvictionComparatorSupplier(),
         diskStorageCacheParams,
         DuplicatingCacheEventListener(cacheEventListener!!),
-        Mockito.mock<CacheErrorLogger?>(CacheErrorLogger::class.java),
+        Mockito.mock<CacheErrorLogger>(CacheErrorLogger::class.java),
         diskTrimmableRegistry,
         backgroundExecutor!!,
         indexPopulateAtStartupEnabled,
@@ -678,7 +678,7 @@ class DiskStorageCacheTest {
   }
 
   private fun verifyListenerOnHit(key: CacheKey?, resourceId: String?) {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onHit(cacheEventCaptor.capture())
@@ -689,7 +689,7 @@ class DiskStorageCacheTest {
   }
 
   private fun verifyListenerOnMiss(key: CacheKey?) {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onMiss(cacheEventCaptor.capture())
@@ -700,7 +700,7 @@ class DiskStorageCacheTest {
   }
 
   private fun verifyListenerOnWriteAttempt(key: CacheKey?) {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onWriteAttempt(cacheEventCaptor.capture())
@@ -712,7 +712,7 @@ class DiskStorageCacheTest {
       key: CacheKey?,
       itemSize: Long,
   ): String? {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onWriteSuccess(cacheEventCaptor.capture())
@@ -728,7 +728,7 @@ class DiskStorageCacheTest {
   }
 
   private fun verifyListenerOnWriteException(key: CacheKey?, exception: IOException?) {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onWriteException(cacheEventCaptor.capture())
@@ -740,7 +740,7 @@ class DiskStorageCacheTest {
   }
 
   private fun verifyListenerOnReadException(key: CacheKey?, exception: IOException?) {
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
         .verify<CacheEventListener>(checkNotNull(cacheEventListener))
         .onReadException(cacheEventCaptor.capture())
@@ -758,9 +758,9 @@ class DiskStorageCacheTest {
       cacheSizeBeforeEviction: Long,
   ) {
     val numberItems = resourceIds.size
-    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent?, CacheEvent?>(CacheEvent::class.java)
+    val cacheEventCaptor = ArgumentCaptor.forClass<CacheEvent, CacheEvent>(CacheEvent::class.java)
     cacheEventListenerInOrder!!
-        .verify<CacheEventListener?>(cacheEventListener, times(numberItems))
+        .verify<CacheEventListener>(cacheEventListener, times(numberItems))
         .onEviction(cacheEventCaptor.capture())
 
     val found = BooleanArray(numberItems)
@@ -897,7 +897,7 @@ class DiskStorageCacheTest {
           version,
           Suppliers.of<File?>(RuntimeEnvironment.application.getApplicationContext().getCacheDir()),
           CACHE_TYPE,
-          Mockito.mock<CacheErrorLogger?>(CacheErrorLogger::class.java),
+          Mockito.mock<CacheErrorLogger>(CacheErrorLogger::class.java),
       )
     }
   }

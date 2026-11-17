@@ -77,6 +77,7 @@ open class FrescoController2Impl(
           config.experimentalResetLocalVitoImageRequestListener(),
           config.experimentalResetLocalImagePerfStateListener(),
           config.experimentalResetControllerListener2(),
+          config.preservePendingReleaseOnImageUpdate(),
       )
           as T
 
@@ -505,15 +506,6 @@ open class FrescoController2Impl(
   override fun onRelease(drawable: FrescoDrawable2Impl) {
     val imageRequest = drawable.imageRequest
     if (imageRequest != null) {
-      // Offer the image back to the memory cache before the drawable closes its reference so it
-      // can be re-served on scroll-back. Mirrors KFrescoController's offer-back hook.
-      if (config.useOfferBackOnRelease()) {
-        val ref = drawable.imageReference
-        val image = ref?.get()
-        if (ref != null && CloseableReference.isValid(ref) && image is CloseableBitmap) {
-          imagePipeline.returnImageToCache(imageRequest, ref)
-        }
-      }
       // Notify listeners
       drawable.internalListener.onRelease(
           drawable.imageId,

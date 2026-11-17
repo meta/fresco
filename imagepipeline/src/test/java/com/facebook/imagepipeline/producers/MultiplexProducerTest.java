@@ -164,6 +164,75 @@ public class MultiplexProducerTest {
   }
 
   @Test
+  public void testConfigFreeContextIsPreservedWhenInputRestarts() {
+    MultiplexProducer<String, CloseableReference<CloseableImage>> producer =
+        new MultiplexProducer<String, CloseableReference<CloseableImage>>(
+            mInputProducer, "GenericMultiplexProducer", "deduped", mConfig) {
+          @Override
+          protected String getKey(ProducerContext context) {
+            return "same";
+          }
+
+          @Override
+          protected @Nullable CloseableReference<CloseableImage> cloneOrNull(
+              @Nullable CloseableReference<CloseableImage> image) {
+            return CloseableReference.cloneOrNull(image);
+          }
+        };
+    SettableProducerContext context =
+        new SettableProducerContext(
+            mImageRequest1,
+            "config-free",
+            mProducerListener,
+            mCallerContext,
+            ImageRequest.RequestLevel.FULL_FETCH,
+            false,
+            true,
+            Priority.MEDIUM,
+            null);
+
+    producer.produceResults(mConsumer1, context);
+    assertThat(BaseProducerContext.getImagePipelineConfigOrNull(mMultiplexedContext1)).isNull();
+    mForwardingConsumer1.onCancellation();
+    assertThat(mForwardingConsumer2).isNotNull();
+    assertThat(BaseProducerContext.getImagePipelineConfigOrNull(mMultiplexedContext2)).isNull();
+    mForwardingConsumer2.onNewResult(null, Consumer.IS_LAST);
+    assertThat(producer.mMultiplexers.isEmpty()).isTrue();
+  }
+
+  @Test
+  public void testConfigFreeBitmapMultiplexPreservesProgressAndResults() {
+    BitmapMemoryCacheKeyMultiplexProducer producer =
+        new BitmapMemoryCacheKeyMultiplexProducer(mCacheKeyFactory, mInputProducer, null);
+    when(mCacheKeyFactory.getPostprocessedBitmapCacheKey(mImageRequest1, mCallerContext))
+        .thenReturn(mBitmapMemoryCacheKey1);
+    SettableProducerContext context =
+        new SettableProducerContext(
+            mImageRequest1,
+            "config-free",
+            mProducerListener,
+            mCallerContext,
+            ImageRequest.RequestLevel.FULL_FETCH,
+            true,
+            true,
+            Priority.MEDIUM,
+            null);
+
+    producer.produceResults(mConsumer1, context);
+    producer.produceResults(mConsumer2, context);
+
+    assertThat(producer.mMultiplexers).hasSize(1);
+    assertThat(BaseProducerContext.getImagePipelineConfigOrNull(mMultiplexedContext1)).isNull();
+    mForwardingConsumer1.onProgressUpdate(0.5f);
+    verify(mConsumer1).onProgressUpdate(0.5f);
+    verify(mConsumer2).onProgressUpdate(0.5f);
+    mForwardingConsumer1.onNewResult(mFinalImageReference1, Consumer.IS_LAST);
+    verify(mConsumer1).onNewResult(mFinalImageReference1, Consumer.IS_LAST);
+    verify(mConsumer2).onNewResult(mFinalImageReference1, Consumer.IS_LAST);
+    assertThat(producer.mMultiplexers).isEmpty();
+  }
+
+  @Test
   public void testSingleRequest() {
     mMultiplexProducer.produceResults(mConsumer1, mProducerContext1);
     mForwardingConsumer1.onNewResult(mIntermediateImageReference1, Consumer.NO_FLAGS);

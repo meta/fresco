@@ -328,7 +328,7 @@ class DownsampleUtilTest {
     encodedImage =
         EncodedImage(
             CloseableReference.of<PooledByteBuffer?>(
-                Mockito.mock<PooledByteBuffer?>(PooledByteBuffer::class.java),
+                Mockito.mock<PooledByteBuffer>(PooledByteBuffer::class.java),
             ),
         )
     encodedImage.setWidth(width)

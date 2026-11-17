@@ -42,6 +42,7 @@ public class ContextChain implements Parcelable {
   private @Nullable Map<String, Object> mExtraData;
 
   private @Nullable String mSerializedChainString;
+  private volatile @Nullable String[] mSerializedChainArray;
   private String mSerializedNodeString;
 
   public ContextChain(
@@ -170,6 +171,16 @@ public class ContextChain implements Parcelable {
 
   public String[] toStringArray() {
     return toString().split(String.valueOf(PARENT_SEPARATOR));
+  }
+
+  /** Returns a shared token array. Callers must not mutate the returned value. */
+  public String[] toStringArrayCached() {
+    String[] serializedChainArray = mSerializedChainArray;
+    if (serializedChainArray == null) {
+      serializedChainArray = toStringArray();
+      mSerializedChainArray = serializedChainArray;
+    }
+    return serializedChainArray;
   }
 
   @Override

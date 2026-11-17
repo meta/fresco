@@ -59,6 +59,49 @@ class SettableProducerContextTest {
   }
 
   @Test
+  fun contextCopiesPreserveOptionalConfigAndRequestMetadata() {
+    val overrideRequest = Mockito.mock(ImageRequest::class.java)
+    for (pipelineConfig in listOf(config, null)) {
+      val source = SettableProducerContext(
+          imageRequest,
+          requestId,
+          "screen",
+          settableProducerContext.producerListener,
+          settableProducerContext.callerContext,
+          ImageRequest.RequestLevel.FULL_FETCH,
+          true,
+          true,
+          Priority.HIGH,
+          pipelineConfig,
+      )
+      source.putExtra("copied", "value")
+      for ((copy, request) in
+          listOf(source, object : ProducerContext by source {}).flatMap { context ->
+            listOf(
+                SettableProducerContext(context) to imageRequest,
+                SettableProducerContext(overrideRequest, context) to overrideRequest,
+            )
+          }) {
+        assertThat(copy.imageRequest).isSameAs(request)
+        assertThat(copy.id).isEqualTo(requestId)
+        assertThat(copy.uiComponentId).isEqualTo("screen")
+        assertThat(copy.getExtra<String>("copied")).isEqualTo("value")
+        assertThat(copy.isPrefetch).isTrue()
+        assertThat(copy.priority).isEqualTo(Priority.HIGH)
+        assertThat(BaseProducerContext.getImagePipelineConfigOrNull(copy)).isSameAs(pipelineConfig)
+      }
+    }
+  }
+
+  @Test
+  fun optionalConfigAccessorSupportsOtherProducerContexts() {
+    val context = Mockito.mock(ProducerContext::class.java)
+    Mockito.`when`(context.imagePipelineConfig).thenReturn(config)
+
+    assertThat(BaseProducerContext.getImagePipelineConfigOrNull(context)).isSameAs(config)
+  }
+
+  @Test
   fun testIsPrefetch() {
     assertThat(settableProducerContext.isPrefetch).isFalse()
   }

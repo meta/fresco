@@ -115,7 +115,7 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
     @JvmField var bitmapPrepareToDrawMaxSizeBytes = 0
 
     @JvmField var bitmapPrepareToDrawForPrefetch = false
-    @JvmField var maxBitmapDimension = BitmapUtil.MAX_BITMAP_DIMENSION.toInt()
+    @JvmField var maxBitmapDimension: Int = BitmapUtil.MAX_BITMAP_DIMENSION.toInt()
     @JvmField var nativeCodeDisabled = false
     @JvmField var isPartialImageCachingEnabled = false
     @JvmField var producerFactoryMethod: ProducerFactoryMethod? = null

@@ -24,6 +24,9 @@ interface FrescoDrawableInterface : VisibilityAware {
 
   fun setMutateDrawables(mutateDrawables: Boolean)
 
+  /** Whether setting a color filter on the drawable applies it during rendering. */
+  fun supportsColorFilter(): Boolean = true
+
   val actualImageDrawable: Drawable?
 
   fun hasImage(): Boolean

@@ -17,6 +17,7 @@ import javax.annotation.Nullable;
 
 /** Builder for {@link ImageDecodeOptions}. */
 @Nullsafe(Nullsafe.Mode.LOCAL)
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class ImageDecodeOptionsBuilder<T extends ImageDecodeOptionsBuilder> {
 
   private int mMinDecodeIntervalMs = 100;

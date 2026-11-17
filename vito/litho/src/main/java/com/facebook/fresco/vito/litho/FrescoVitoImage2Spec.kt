@@ -66,7 +66,6 @@ import com.facebook.litho.annotations.Prop
 import com.facebook.litho.annotations.PropDefault
 import com.facebook.litho.annotations.Reason
 import com.facebook.litho.annotations.ResType
-import com.facebook.litho.annotations.ShouldExcludeFromIncrementalMount
 import com.facebook.litho.annotations.ShouldUpdate
 import com.facebook.litho.annotations.State
 import com.facebook.litho.annotations.TreeProp
@@ -559,11 +558,6 @@ object FrescoVitoImage2Spec {
       is NoPrefetchInOnPrepareStrategy -> {}
     }
   }
-
-  @JvmStatic
-  @ShouldExcludeFromIncrementalMount
-  fun shouldExcludeFromIM(@Prop(optional = true) shouldExcludeFromIM: Boolean): Boolean =
-      shouldExcludeFromIM
 
   private fun determineImageSource(
       imageSource: ImageSource?,

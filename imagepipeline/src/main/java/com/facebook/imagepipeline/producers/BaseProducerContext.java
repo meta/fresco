@@ -57,7 +57,7 @@ public class BaseProducerContext implements ProducerContext {
   @GuardedBy("this")
   private final List<ProducerContextCallbacks> mCallbacks;
 
-  private final ImagePipelineConfigInterface mImagePipelineConfig;
+  @Nullable private final ImagePipelineConfigInterface mImagePipelineConfig;
 
   public BaseProducerContext(
       ImageRequest imageRequest,
@@ -68,7 +68,7 @@ public class BaseProducerContext implements ProducerContext {
       boolean isPrefetch,
       boolean isIntermediateResultExpected,
       Priority priority,
-      ImagePipelineConfigInterface imagePipelineConfig) {
+      @Nullable ImagePipelineConfigInterface imagePipelineConfig) {
     this(
         imageRequest,
         id,
@@ -95,7 +95,7 @@ public class BaseProducerContext implements ProducerContext {
       boolean isPrefetch,
       boolean isIntermediateResultExpected,
       Priority priority,
-      ImagePipelineConfigInterface imagePipelineConfig) {
+      @Nullable ImagePipelineConfigInterface imagePipelineConfig) {
     mImageRequest = imageRequest;
     mId = id;
 
@@ -187,7 +187,23 @@ public class BaseProducerContext implements ProducerContext {
 
   @Override
   public ImagePipelineConfigInterface getImagePipelineConfig() {
+    if (mImagePipelineConfig == null) {
+      throw new UnsupportedOperationException("No ImagePipelineConfig for this producer sequence");
+    }
     return mImagePipelineConfig;
+  }
+
+  /** For generic producer stages where native pipeline configuration is optional. */
+  @Nullable
+  public static ImagePipelineConfigInterface getImagePipelineConfigOrNull(ProducerContext context) {
+    if (context instanceof BaseProducerContext) {
+      return ((BaseProducerContext) context).mImagePipelineConfig;
+    }
+    try {
+      return context.getImagePipelineConfig();
+    } catch (UnsupportedOperationException e) {
+      return null;
+    }
   }
 
   /** Cancels the request processing and calls appropriate callbacks. */
@@ -316,7 +332,7 @@ public class BaseProducerContext implements ProducerContext {
   }
 
   @Override
-  public void putExtra(String key, @Nullable Object value) {
+  public <E> void putExtra(String key, @Nullable E value) {
     if (INITIAL_KEYS.contains(key)) return;
     mExtras.put(key, value);
   }

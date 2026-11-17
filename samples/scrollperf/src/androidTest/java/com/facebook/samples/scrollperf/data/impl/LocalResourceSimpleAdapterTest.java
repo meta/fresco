@@ -12,15 +12,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import android.content.Context;
 import android.content.res.Resources;
 import android.net.Uri;
-import android.test.AndroidTestCase;
+import androidx.test.InstrumentationRegistry;
 import com.facebook.samples.scrollperf.R;
 import com.facebook.samples.scrollperf.data.SimpleAdapter;
+import org.junit.Test;
 
 /** This is the Unit Test class for the LocalResourceSimpleAdapterTest */
-public class LocalResourceSimpleAdapterTest extends AndroidTestCase {
+public class LocalResourceSimpleAdapterTest {
 
+  @Test
   public void testEagerAdapter() {
-    final Context context = getContext();
+    final Context context = InstrumentationRegistry.getTargetContext();
     final Resources res = context.getResources();
     final String[] uris = res.getStringArray(R.array.local_uri_test);
     assertThat(uris).isNotNull();
@@ -30,8 +32,9 @@ public class LocalResourceSimpleAdapterTest extends AndroidTestCase {
     assertThat(simpleAdapter.isLazy()).isFalse();
   }
 
+  @Test
   public void testLazyAdapter() {
-    final Context context = getContext();
+    final Context context = InstrumentationRegistry.getTargetContext();
     final Resources res = context.getResources();
     final String[] uris = res.getStringArray(R.array.local_uri_test);
     assertThat(uris).isNotNull();

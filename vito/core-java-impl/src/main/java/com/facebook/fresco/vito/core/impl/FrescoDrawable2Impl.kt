@@ -43,6 +43,7 @@ class FrescoDrawable2Impl(
     private val resetLocalVitoImageRequestListener: Boolean = false,
     private val resetLocalImagePerfStateListener: Boolean = false,
     private val resetControllerListener2: Boolean = false,
+    private val preservePendingReleaseOnImageUpdate: Boolean = false,
 ) : FrescoDrawable2(), DataSubscriber<CloseableReference<CloseableImage>> {
 
   override var imageRequest: VitoImageRequest? = null
@@ -124,8 +125,10 @@ class FrescoDrawable2Impl(
       imageDrawable: Drawable?,
       imageReference: CloseableReference<CloseableImage>?,
   ): Drawable? {
-    cancelReleaseNextFrame()
-    cancelReleaseDelayed()
+    if (!preservePendingReleaseOnImageUpdate) {
+      cancelReleaseNextFrame()
+      cancelReleaseDelayed()
+    }
     if (imageDrawable !== actualImageWrapper) {
       actualImageWrapper.setCurrent(NopDrawable)
     }

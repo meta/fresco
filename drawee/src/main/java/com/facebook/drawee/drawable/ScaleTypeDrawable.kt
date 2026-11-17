@@ -14,6 +14,8 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.annotation.VisibleForTesting
 import com.facebook.common.internal.Objects
+import com.facebook.common.internal.Supplier
+import com.facebook.common.internal.Suppliers
 import com.facebook.drawee.drawable.ScalingUtils.StatefulScaleType
 import kotlin.jvm.JvmField
 
@@ -193,8 +195,12 @@ class ScaleTypeDrawable : ForwardingDrawable {
       return
     }
 
-    // If the drawable fits exactly, no transform needed.
-    if (underlyingWidth == viewWidth && underlyingHeight == viewHeight) {
+    // If the drawable fits exactly, no transform is needed unless the host enables state updates.
+    if (
+        underlyingWidth == viewWidth &&
+            underlyingHeight == viewHeight &&
+            (mScaleType !is StatefulScaleType || !fixStatefulScaleTypeExactSizeBounds.get())
+    ) {
       underlyingDrawable.bounds = bounds
       mDrawMatrix = null
       return
@@ -235,5 +241,9 @@ class ScaleTypeDrawable : ForwardingDrawable {
     if (mDrawMatrix != null) {
       transform.preConcat(mDrawMatrix)
     }
+  }
+
+  companion object {
+    @JvmField var fixStatefulScaleTypeExactSizeBounds: Supplier<Boolean> = Suppliers.BOOLEAN_FALSE
   }
 }

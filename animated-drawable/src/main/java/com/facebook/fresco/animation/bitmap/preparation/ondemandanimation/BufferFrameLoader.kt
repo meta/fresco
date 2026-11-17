@@ -119,7 +119,12 @@ class BufferFrameLoader(
     }
 
     val bitmapRef = platformBitmapFactory.createBitmap(width, height)
-    bitmapFrameRenderer.renderFrame(0, bitmapRef.get())
+    try {
+      bitmapFrameRenderer.renderFrame(0, bitmapRef.get())
+    } catch (renderFailure: Throwable) {
+      CloseableReference.closeSafely(bitmapRef)
+      throw renderFailure
+    }
     singleFrameRef = bitmapRef
     return FrameResult(bitmapRef.clone(), FrameResult.FrameType.SUCCESS)
   }

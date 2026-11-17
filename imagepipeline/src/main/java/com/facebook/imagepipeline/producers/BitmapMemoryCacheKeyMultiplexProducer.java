@@ -29,7 +29,7 @@ public class BitmapMemoryCacheKeyMultiplexProducer
   public BitmapMemoryCacheKeyMultiplexProducer(
       CacheKeyFactory cacheKeyFactory,
       Producer<CloseableReference<CloseableImage>> inputProducer,
-      ImagePipelineConfigInterface config) {
+      @Nullable ImagePipelineConfigInterface config) {
     super(
         inputProducer,
         "BitmapMemoryCacheKeyMultiplexProducer",
@@ -39,7 +39,9 @@ public class BitmapMemoryCacheKeyMultiplexProducer
   }
 
   protected Pair<CacheKey, ImageRequest.RequestLevel> getKey(ProducerContext producerContext) {
-    if (producerContext.getImagePipelineConfig().getExperiments().getUsePostProcessedCacheKey()) {
+    ImagePipelineConfigInterface config =
+        BaseProducerContext.getImagePipelineConfigOrNull(producerContext);
+    if (config == null || config.getExperiments().getUsePostProcessedCacheKey()) {
       return Pair.create(
           mCacheKeyFactory.getPostprocessedBitmapCacheKey(
               producerContext.getImageRequest(), producerContext.getCallerContext()),

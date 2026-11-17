@@ -48,9 +48,7 @@ import com.facebook.imagepipeline.decoder.SimpleProgressiveJpegConfig
 import com.facebook.imagepipeline.listener.ForwardingRequestListener
 import com.facebook.imagepipeline.listener.RequestListener
 import com.facebook.imagepipeline.listener.RequestLoggingListener
-import com.facebook.imagepipeline.stetho.FrescoStethoPlugin
 import com.facebook.soloader.SoLoader
-import com.facebook.stetho.Stetho
 import com.facebook.stetho.okhttp3.StethoInterceptor
 import okhttp3.OkHttpClient
 
@@ -61,7 +59,6 @@ class ShowcaseApplication : Application() {
 
   override fun onCreate() {
     super.onCreate()
-    ShowcaseProvider.initIfNeeded(applicationContext)
     FLog.minimumLoggingLevel = FLog.VERBOSE
     val forwardingRequestListener = ForwardingRequestListener()
     val requestListeners =
@@ -126,14 +123,9 @@ class ShowcaseApplication : Application() {
 
     Fresco.initialize(this, imagePipelineConfig, draweeConfigBuilder.build())
     initVito(resources)
+    ShowcaseProvider.initIfNeeded(applicationContext)
     val context = this
-    Stetho.initialize(
-        Stetho.newInitializerBuilder(context)
-            .enableDumpapp {
-              Stetho.DefaultDumperPluginsBuilder(context).provide(FrescoStethoPlugin()).finish()
-            }
-            .build(),
-    )
+    DumpappInitializer.initialize(context)
 
     if (shouldEnableFlipper()) {
       SoLoader.init(this, 0)

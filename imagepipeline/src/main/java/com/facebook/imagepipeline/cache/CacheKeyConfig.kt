@@ -40,8 +40,14 @@ data class CacheKeyConfig(
     val debugImageTracker: ((ImageRequest, CacheKey) -> Unit)? = null,
 )
 
+/** Optional postprocessor key that includes all output-affecting parameters. */
+interface FullPostprocessorCacheKeyProvider {
+  /** Must preserve whether the legacy postprocessor key is null. */
+  fun getFullPostprocessorCacheKey(): CacheKey?
+}
+
 /** Extracts width/height dimensions from a request for cache key generation. */
-interface DimensionExtractor {
+fun interface DimensionExtractor {
   fun extractDimensions(
       request: ImageRequest,
       sourceUri: Uri,
@@ -56,6 +62,6 @@ interface DimensionExtractor {
  * debugging tools or disk cache eviction). Any transformation must be deterministic because the
  * returned [CacheKey] defines cache lookup equality.
  */
-interface EncodedCacheKeyEnricher {
+fun interface EncodedCacheKeyEnricher {
   fun enrich(keyString: String, callerContext: Any?, sourceUri: Uri): CacheKey
 }

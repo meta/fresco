@@ -7,8 +7,6 @@
 
 package com.facebook.fresco.middleware
 
-typealias Extras = Map<String, Any>
-
 interface HasExtraData {
 
   fun <E> putExtra(key: String, value: E?)
@@ -17,9 +15,9 @@ interface HasExtraData {
 
   fun <E> getExtra(key: String, valueIfNotFound: E? = null): E?
 
-  fun getExtras(): Extras
+  fun getExtras(): Map<String, Any>
 
-  fun putExtras(extras: Extras)
+  fun putExtras(extras: Map<String, Any>)
 
   companion object {
     const val KEY_ID = "id"

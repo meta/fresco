@@ -27,6 +27,7 @@ import org.mockito.stubbing.Answer;
 
 /** Drawee mocks */
 @Nullsafe(Nullsafe.Mode.LOCAL)
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class DraweeMocks {
 
   /**
@@ -194,6 +195,7 @@ public class DraweeMocks {
    * @param values values to return on {@code get()}
    * @return supplier of T
    */
+  @SafeVarargs
   public static <T> Supplier<T> supplierOf(final T... values) {
     final AtomicInteger index = new AtomicInteger(0);
     return new Supplier<T>() {

@@ -86,7 +86,7 @@ class LocalFileFetchProducerTest {
               }
             },
         )
-        .`when`<Consumer<EncodedImage?>?>(consumer)
+        .`when`<Consumer<EncodedImage?>>(consumer)
         .onNewResult(
             ArgumentMatchers.notNull<EncodedImage?>(EncodedImage::class.java),
             ArgumentMatchers.anyInt(),
@@ -97,11 +97,11 @@ class LocalFileFetchProducerTest {
   fun testLocalFileFetchCancelled() {
     localFileFetchProducer.produceResults(consumer, producerContext)
     producerContext.cancel()
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerStart(producerContext, PRODUCER_NAME)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerFinishWithCancellation(producerContext, PRODUCER_NAME, null)
-    Mockito.verify<Consumer<EncodedImage?>?>(consumer).onCancellation()
+    Mockito.verify<Consumer<EncodedImage?>>(consumer).onCancellation()
     executor.runUntilIdle()
     verifyNoMoreInteractions(pooledByteBufferFactory)
   }
@@ -128,11 +128,11 @@ class LocalFileFetchProducerTest {
     )
         .isEqualTo(2)
     assertThat(capturedEncodedImage?.getByteBufferRef()?.get()).isSameAs(pooledByteBuffer)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerStart(producerContext, PRODUCER_NAME)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerFinishWithSuccess(producerContext, PRODUCER_NAME, null)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onUltimateProducerReached(producerContext, PRODUCER_NAME, true)
   }
 
@@ -146,12 +146,12 @@ class LocalFileFetchProducerTest {
             ),
         )
         .thenThrow(exception)
-    Mockito.verify<Consumer<EncodedImage?>?>(consumer).onFailure(exception)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<Consumer<EncodedImage?>>(consumer).onFailure(exception)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerStart(producerContext, PRODUCER_NAME)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onProducerFinishWithFailure(producerContext, PRODUCER_NAME, exception, null)
-    Mockito.verify<ProducerListener2?>(producerListener)
+    Mockito.verify<ProducerListener2>(producerListener)
         .onUltimateProducerReached(producerContext, PRODUCER_NAME, false)
   }
 

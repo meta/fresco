@@ -63,7 +63,7 @@ class DecodeProducer(
     val decodedOriginalImageAnalyzers: Set<DecodedOriginalImageAnalyzer>? = null,
 ) : Producer<CloseableReference<CloseableImage>> {
 
-  interface DecodedOriginalImageAnalyzer {
+  fun interface DecodedOriginalImageAnalyzer {
     fun analyze(
         context: ProducerContext,
         imageRef: CloseableReference<CloseableImage>,
@@ -74,7 +74,7 @@ class DecodeProducer(
   override fun produceResults(
       consumer: Consumer<CloseableReference<CloseableImage>>,
       context: ProducerContext,
-  ) =
+  ): Unit =
       traceSection("DecodeProducer#produceResults") {
         val imageRequest = context.imageRequest
         val progressiveDecoder =

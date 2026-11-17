@@ -64,13 +64,13 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
 
   private final String mProducerName;
   private final String mDedupedRequestsCountKey;
-  private final ImagePipelineConfigInterface mConfig;
+  private final @Nullable ImagePipelineConfigInterface mConfig;
 
   protected MultiplexProducer(
       Producer<T> inputProducer,
       String producerName,
       String dedupedRequestsCountKey,
-      ImagePipelineConfigInterface config) {
+      @Nullable ImagePipelineConfigInterface config) {
     this(inputProducer, producerName, dedupedRequestsCountKey, false, config);
   }
 
@@ -79,7 +79,7 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
       String producerName,
       String dedupedRequestsCountKey,
       boolean keepCancelledFetchAsLowPriority,
-      ImagePipelineConfigInterface config) {
+      @Nullable ImagePipelineConfigInterface config) {
     mInputProducer = inputProducer;
     mMultiplexers = new HashMap<>();
     mKeepCancelledFetchAsLowPriority = keepCancelledFetchAsLowPriority;
@@ -384,7 +384,7 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
                 computeIsPrefetch(),
                 computeIsIntermediateResultExpected(),
                 computePriority(),
-                producerContext.getImagePipelineConfig());
+                BaseProducerContext.getImagePipelineConfigOrNull(producerContext));
         mMultiplexProducerContext.putExtras(producerContext.getExtras());
         if (startedAsPrefetch.isSet()) {
           mMultiplexProducerContext.putExtra(
@@ -539,10 +539,11 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
     }
 
     public void onProgressUpdate(ForwardingConsumer forwardingConsumer, float progress) {
-      if (mConfig.getExperiments().getIntermediateProgressUpdatesDisabled()) {
+      if (mConfig != null && mConfig.getExperiments().getIntermediateProgressUpdatesDisabled()) {
         return;
       }
-      if (mConfig.getExperiments().getIntermediateProgressUpdatesForPrefetchDisabled()) {
+      if (mConfig != null
+          && mConfig.getExperiments().getIntermediateProgressUpdatesForPrefetchDisabled()) {
         BaseProducerContext context = mMultiplexProducerContext;
         if (context != null && context.isPrefetch()) {
           return;

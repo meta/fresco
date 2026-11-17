@@ -39,6 +39,8 @@ interface FrescoVitoConfig {
 
   fun useNewReleaseCallback(): Boolean
 
+  fun preservePendingReleaseOnImageUpdate(): Boolean = false
+
   fun useNativeRounding(): Supplier<Boolean>?
 
   fun layoutPrefetchingEnabled(callerContext: Any?): Boolean
@@ -116,15 +118,6 @@ interface FrescoVitoConfig {
   fun disableBitmapCacheShortcut(): Boolean = false
 
   /**
-   * Enables offer-back-on-release for `CloseableBitmap` images. When on, the drawable's image
-   * reference is re-offered to the memory cache when the Vito drawable is reset, instead of being
-   * closed immediately — letting the cache potentially reuse the entry on the next request.
-   *
-   * Applies only to `CloseableBitmap` instances.
-   */
-  fun useOfferBackOnRelease(): Boolean = false
-
-  /**
    * When on, an image is released immediately when its view becomes non-visible (e.g. scrolled off
    * screen) instead of on the next frame. Releasing sooner drops the drawable's strong reference to
    * the underlying bitmap earlier, making it eligible for GC while scrolling rather than only after
@@ -166,6 +159,8 @@ interface FrescoVitoConfig {
   fun fetchInVitoPainterInit(): Boolean = false
 
   fun enableComposeImagePathFixes(): Boolean = false
+
+  fun enableComposeColorFilterFix(): Boolean = false
 
   /**
    * Executor used to create a Compose painter's image request away from the main thread. A null

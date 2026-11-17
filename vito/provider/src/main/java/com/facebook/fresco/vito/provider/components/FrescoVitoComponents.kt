@@ -15,6 +15,7 @@ import com.facebook.fresco.vito.core.VitoImagePipeline
 import com.facebook.fresco.vito.provider.setup.FrescoVitoSetup
 import java.lang.RuntimeException
 
+@Suppress("KotlinSplitStaticMonitor")
 object FrescoVitoComponents : FrescoVitoSetup {
 
   private var _implementation: FrescoVitoSetup? = null

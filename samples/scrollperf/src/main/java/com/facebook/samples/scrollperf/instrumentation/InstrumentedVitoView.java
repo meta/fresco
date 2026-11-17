@@ -32,6 +32,7 @@ public class InstrumentedVitoView extends ImageView implements Instrumented {
   private ImageListener mListener;
   private ImageOptions.Builder mImageOptionsBuilder;
 
+  @SuppressWarnings("this-escape")
   public InstrumentedVitoView(
       Context context, ImageOptions.Builder imageOptionsBuilder, Config config) {
     super(context);

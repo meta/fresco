@@ -245,7 +245,7 @@ class BufferedDiskCache(
    * Associates encodedImage with given key in disk cache. Disk write is performed on background
    * thread, so the caller of this method is not blocked
    */
-  fun put(key: CacheKey, encodedImage: EncodedImage) =
+  fun put(key: CacheKey, encodedImage: EncodedImage): Unit =
       traceSection("BufferedDiskCache#put") {
         check(EncodedImage.isValid(encodedImage))
 

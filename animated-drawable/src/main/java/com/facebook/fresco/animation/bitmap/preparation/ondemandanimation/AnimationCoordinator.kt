@@ -98,7 +98,7 @@ object AnimationCoordinator {
    * the animation performance based on this data.
    */
   fun onRenderFrame(animation: DynamicRenderingFps, frameResult: FrameResult) {
-    if (!runningAnimations.contains(animation)) {
+    if (!runningAnimations.containsKey(animation)) {
       val fps = animation.animationFps
       val fpsStep = fps.times(FPS_STEP_PERCENTAGE).toInt()
 

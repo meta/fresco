@@ -4,6 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
+
 package com.facebook.imagepipeline.producers
 
 import com.facebook.fresco.middleware.HasExtraData
@@ -59,6 +60,12 @@ interface ProducerContext : HasExtraData {
    */
   fun addCallbacks(callbacks: ProducerContextCallbacks)
 
+  /**
+   * Native pipeline configuration.
+   *
+   * @throws UnsupportedOperationException for contexts created by a config-free pipeline. Such
+   *   sequences must perform their work without reading this property.
+   */
   val imagePipelineConfig: ImagePipelineConfigInterface
 
   /** Helper to set [HasExtraData.KEY_ORIGIN] and [HasExtraData.KEY_ORIGIN_SUBCATEGORY] */

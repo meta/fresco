@@ -12,6 +12,7 @@ import static com.facebook.imagepipeline.request.ImageRequest.CachesLocationsMas
 import static com.facebook.imagepipeline.request.ImageRequest.RequestLevel;
 
 import android.net.Uri;
+import com.facebook.common.internal.Fn;
 import com.facebook.common.internal.Preconditions;
 import com.facebook.common.util.UriUtil;
 import com.facebook.imagepipeline.common.BytesRange;
@@ -24,7 +25,10 @@ import com.facebook.imagepipeline.core.ImagePipelineConfig;
 import com.facebook.imagepipeline.core.ImagePipelineExperiments;
 import com.facebook.imagepipeline.listener.RequestListener;
 import com.facebook.infer.annotation.FalseOnNull;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -33,6 +37,7 @@ public class ImageRequestBuilder {
 
   private static final Set<String> CUSTOM_NETWORK_SCHEMES = new HashSet<>();
   @Nullable private Uri mSourceUri = null;
+  @Nullable private Fn<ImageRequestBuilder, Uri> mSourceUriSupplier = null;
   private RequestLevel mLowestPermittedRequestLevel = RequestLevel.FULL_FETCH;
   private int mCachesDisabled = 0; // All caches enabled by default
   private @Nullable ResizeOptions mResizeOptions = null;
@@ -55,6 +60,7 @@ public class ImageRequestBuilder {
   private @Nullable String mDiskCacheId = null;
   private @Nullable String mCustomCacheKey = null;
   private Boolean mIsFirstFrameThumbnailEnabled = false;
+  private @Nullable Map<ImageRequestExtra<?>, Object> mExtras = null;
 
   /**
    * Creates a new request builder instance. The setting will be done according to the source type.
@@ -64,6 +70,12 @@ public class ImageRequestBuilder {
    */
   public static ImageRequestBuilder newBuilderWithSource(Uri uri) {
     return new ImageRequestBuilder().setSource(uri);
+  }
+
+  /** Creates a builder with a source resolved on its first read. See {@link #setSourceSupplier}. */
+  public static ImageRequestBuilder newBuilderWithSourceSupplier(
+      Fn<ImageRequestBuilder, Uri> supplier) {
+    return new ImageRequestBuilder().setSourceSupplier(supplier);
   }
 
   /**
@@ -116,7 +128,8 @@ public class ImageRequestBuilder {
         .setResizingAllowedOverride(imageRequest.getResizingAllowedOverride())
         .setIsFirstFrameThumbnailEnabled(imageRequest.isFirstFrameThumbnailEnabled())
         .setSkipEncodedPartialImagesInCachesNotInRequestRange(
-            imageRequest.getSkipEncodedPartialImagesInCachesNotInRequestRange());
+            imageRequest.getSkipEncodedPartialImagesInCachesNotInRequestRange())
+        .setExtras(imageRequest.getExtras());
   }
 
   public static void addCustomUriNetworkScheme(String scheme) {
@@ -136,11 +149,32 @@ public class ImageRequestBuilder {
     Preconditions.checkNotNull(uri);
 
     mSourceUri = uri;
+    mSourceUriSupplier = null;
     return this;
   }
 
-  /** Gets the source Uri. */
+  /**
+   * Sets a deferred source. The supplier receives this builder and must not read its source. Its
+   * result is memoized on the first source read, including validation, disk-cache checks, or
+   * building the request. A null result leaves the source unset, which {@link #build} rejects.
+   *
+   * <p>Replacing the source with {@link #setSource} or another supplier discards the previous
+   * source.
+   */
+  public ImageRequestBuilder setSourceSupplier(Fn<ImageRequestBuilder, Uri> supplier) {
+    Preconditions.checkNotNull(supplier);
+    mSourceUri = null;
+    mSourceUriSupplier = supplier;
+    return this;
+  }
+
+  /** Gets the source Uri, resolving and memoizing a deferred source if present. */
   public Uri getSourceUri() {
+    if (mSourceUriSupplier != null) {
+      Fn<ImageRequestBuilder, Uri> supplier = mSourceUriSupplier;
+      mSourceUriSupplier = null;
+      mSourceUri = supplier.apply(this);
+    }
     return mSourceUri;
   }
 
@@ -362,8 +396,9 @@ public class ImageRequestBuilder {
   /** Returns whether the use of the disk cache is enabled, which is partly dependent on the URI. */
   public boolean isDiskCacheEnabled() {
     int mask = CachesLocationsMasks.DISK_READ | CachesLocationsMasks.DISK_WRITE;
+    Uri sourceUri = getSourceUri();
     return ((mCachesDisabled & mask) == 0)
-        && (UriUtil.isNetworkUri(mSourceUri) || isCustomNetworkUri(mSourceUri));
+        && (UriUtil.isNetworkUri(sourceUri) || isCustomNetworkUri(sourceUri));
   }
 
   /** Disables memory cache for this request. */
@@ -485,6 +520,22 @@ public class ImageRequestBuilder {
     return new ImageRequest(this);
   }
 
+  /**
+   * Fresco validates request format, not security. This allows to apply per app specific format
+   * validations.
+   */
+  public ImageRequest build(@Nullable Runnable validation) {
+    if (validation != null) {
+      validation.run();
+      if (getSourceUri() == null) {
+        throw new BuilderException("Source must be set!");
+      }
+    } else {
+      validate();
+    }
+    return new ImageRequest(this);
+  }
+
   public @Nullable Boolean shouldDecodePrefetches() {
     return mDecodePrefetches;
   }
@@ -531,6 +582,43 @@ public class ImageRequestBuilder {
     return this;
   }
 
+  /**
+   * Sets an app-defined extra on the request. Passing a null value removes the extra.
+   *
+   * @param key the typed key of the extra
+   * @param value the value to set, or null to remove the extra
+   * @return the modified builder instance
+   */
+  public <T> ImageRequestBuilder setExtra(ImageRequestExtra<T> key, @Nullable T value) {
+    if (value == null) {
+      if (mExtras != null) {
+        mExtras.remove(key);
+      }
+      return this;
+    }
+    if (mExtras == null) {
+      mExtras = new HashMap<>();
+    }
+    mExtras.put(key, value);
+    return this;
+  }
+
+  private ImageRequestBuilder setExtras(@Nullable Map<ImageRequestExtra<?>, Object> extras) {
+    mExtras = extras == null ? null : new HashMap<>(extras);
+    return this;
+  }
+
+  /** Gets the extra set for the given key, or null if there is none. */
+  @SuppressWarnings("unchecked")
+  public @Nullable <T> T getExtra(ImageRequestExtra<T> key) {
+    return mExtras == null ? null : (T) mExtras.get(key);
+  }
+
+  /** Gets all extras set on this builder, or null if none were set. */
+  public @Nullable Map<ImageRequestExtra<?>, Object> getExtras() {
+    return mExtras == null ? null : Collections.unmodifiableMap(mExtras);
+  }
+
   /** An exception class for builder methods. */
   public static class BuilderException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -542,21 +630,22 @@ public class ImageRequestBuilder {
 
   /** Performs validation. */
   protected void validate() {
+    Uri sourceUri = getSourceUri();
     // make sure that the source uri is set correctly.
-    if (mSourceUri == null) {
+    if (sourceUri == null) {
       throw new BuilderException("Source must be set!");
     }
 
     // For local resource we require caller to specify statically generated resource id as a path.
-    if (UriUtil.isLocalResourceUri(mSourceUri)) {
-      if (!mSourceUri.isAbsolute()) {
+    if (UriUtil.isLocalResourceUri(sourceUri)) {
+      if (!sourceUri.isAbsolute()) {
         throw new BuilderException("Resource URI path must be absolute.");
       }
-      if (mSourceUri.getPath().isEmpty()) {
+      if (sourceUri.getPath().isEmpty()) {
         throw new BuilderException("Resource URI must not be empty");
       }
       try {
-        Integer.parseInt(mSourceUri.getPath().substring(1));
+        Integer.parseInt(sourceUri.getPath().substring(1));
       } catch (NumberFormatException ignored) {
         throw new BuilderException("Resource URI path must be a resource id.");
       }
@@ -564,8 +653,8 @@ public class ImageRequestBuilder {
 
     // For local asset we require caller to specify absolute path of an asset, which will be
     // resolved by AssetManager relative to configured asset folder of an app.
-    if (UriUtil.isLocalAssetUri(mSourceUri)) {
-      final String assetPath = mSourceUri.getPath();
+    if (UriUtil.isLocalAssetUri(sourceUri)) {
+      final String assetPath = sourceUri.getPath();
       if (assetPath == null || !assetPath.startsWith("/")) {
         throw new BuilderException("Asset URI path must be absolute.");
       }

@@ -273,6 +273,128 @@ public class ImagePipelineTest {
   }
 
   @Test
+  public void testConfigFreeBitmapPrefetchCompletesOnMemoryCacheHit() {
+    CacheKey key = new SimpleCacheKey("bitmap-key");
+    when(mCacheKeyFactory.getBitmapCacheKey(mImageRequest, null)).thenReturn(key);
+    try (CloseableReference<CloseableImage> cached =
+        CloseableReference.of(mock(CloseableImage.class))) {
+      when(mBitmapMemoryCache.get(key)).thenAnswer(invocation -> cached.clone());
+      ImagePipeline pipeline =
+          new ImagePipeline(
+              mProducerSequenceFactory,
+              mBitmapMemoryCache,
+              mEncodedMemoryCache,
+              mCacheKeyFactory,
+              mThreadHandoffProducerQueue);
+      DataSource<Void> dataSource = pipeline.prefetchToBitmapCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(dataSource.isFinished()).isTrue();
+        assertThat(dataSource.hasFailed()).isFalse();
+        assertThat(cached.isValid()).isTrue();
+        verifyNoMoreInteractions(mProducerSequenceFactory);
+      } finally {
+        dataSource.close();
+      }
+    }
+  }
+
+  @Test
+  public void testConfigFreeEncodedPrefetchCompletesOnMemoryCacheHit() {
+    CacheKey key = new SimpleCacheKey("encoded-key");
+    when(mCacheKeyFactory.getEncodedCacheKey(mImageRequest, null)).thenReturn(key);
+    try (CloseableReference<PooledByteBuffer> cached =
+        CloseableReference.of(mock(PooledByteBuffer.class))) {
+      when(mEncodedMemoryCache.get(key)).thenAnswer(invocation -> cached.clone());
+      ImagePipeline pipeline =
+          new ImagePipeline(
+              mProducerSequenceFactory,
+              mBitmapMemoryCache,
+              mEncodedMemoryCache,
+              mCacheKeyFactory,
+              mThreadHandoffProducerQueue);
+      DataSource<Void> dataSource = pipeline.prefetchToEncodedCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(dataSource.isFinished()).isTrue();
+        assertThat(dataSource.hasFailed()).isFalse();
+        assertThat(cached.isValid()).isTrue();
+        verifyNoMoreInteractions(mProducerSequenceFactory);
+      } finally {
+        dataSource.close();
+      }
+    }
+  }
+
+  @Test
+  public void testConfiguredBitmapPrefetchCacheHitRespectsShortcutFlag() {
+    CacheKey key = new SimpleCacheKey("bitmap-key");
+    when(mCacheKeyFactory.getBitmapCacheKey(mImageRequest, null)).thenReturn(key);
+    Producer<Void> producer = mock(Producer.class);
+    when(mProducerSequenceFactory.getDecodedImagePrefetchProducerSequence(mImageRequest))
+        .thenReturn(producer);
+    try (CloseableReference<CloseableImage> cached =
+        CloseableReference.of(mock(CloseableImage.class))) {
+      when(mBitmapMemoryCache.get(key)).thenAnswer(invocation -> cached.clone());
+      DataSource<Void> withoutShortcut =
+          mImagePipeline.prefetchToBitmapCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(withoutShortcut.isFinished()).isFalse();
+        assertThat(withoutShortcut.hasFailed()).isFalse();
+      } finally {
+        withoutShortcut.close();
+      }
+
+      when(mImagePipelineExperiments.getPrefetchShortcutEnabled()).thenReturn(true);
+      DataSource<Void> withShortcut =
+          mImagePipeline.prefetchToBitmapCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(withShortcut.isFinished()).isTrue();
+        assertThat(withShortcut.hasFailed()).isFalse();
+      } finally {
+        withShortcut.close();
+      }
+      verify(mProducerSequenceFactory, times(1))
+          .getDecodedImagePrefetchProducerSequence(mImageRequest);
+      verify(producer, times(1)).produceResults(any(Consumer.class), any(ProducerContext.class));
+      assertThat(cached.isValid()).isTrue();
+    }
+  }
+
+  @Test
+  public void testConfiguredEncodedPrefetchCacheHitRespectsShortcutFlag() {
+    CacheKey key = new SimpleCacheKey("encoded-key");
+    when(mCacheKeyFactory.getEncodedCacheKey(mImageRequest, null)).thenReturn(key);
+    Producer<Void> producer = mock(Producer.class);
+    when(mProducerSequenceFactory.getEncodedImagePrefetchProducerSequence(mImageRequest))
+        .thenReturn(producer);
+    try (CloseableReference<PooledByteBuffer> cached =
+        CloseableReference.of(mock(PooledByteBuffer.class))) {
+      when(mEncodedMemoryCache.get(key)).thenAnswer(invocation -> cached.clone());
+      DataSource<Void> withoutShortcut =
+          mImagePipeline.prefetchToEncodedCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(withoutShortcut.isFinished()).isFalse();
+        assertThat(withoutShortcut.hasFailed()).isFalse();
+      } finally {
+        withoutShortcut.close();
+      }
+
+      when(mImagePipelineExperiments.getPrefetchShortcutEnabled()).thenReturn(true);
+      DataSource<Void> withShortcut =
+          mImagePipeline.prefetchToEncodedCache(mImageRequest, mCallerContext);
+      try {
+        assertThat(withShortcut.isFinished()).isTrue();
+        assertThat(withShortcut.hasFailed()).isFalse();
+      } finally {
+        withShortcut.close();
+      }
+      verify(mProducerSequenceFactory, times(1))
+          .getEncodedImagePrefetchProducerSequence(mImageRequest);
+      verify(producer, times(1)).produceResults(any(Consumer.class), any(ProducerContext.class));
+      assertThat(cached.isValid()).isTrue();
+    }
+  }
+
+  @Test
   public void testFetchLocalEncodedImage() {
     Producer<CloseableReference<PooledByteBuffer>> encodedSequence = mock(Producer.class);
     when(mProducerSequenceFactory.getEncodedImageProducerSequence(mImageRequest))

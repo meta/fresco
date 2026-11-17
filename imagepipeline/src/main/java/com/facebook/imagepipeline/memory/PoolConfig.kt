@@ -12,7 +12,6 @@ import com.facebook.common.memory.NoOpMemoryTrimmableRegistry
 import com.facebook.imagepipeline.systrace.FrescoSystrace.beginSection
 import com.facebook.imagepipeline.systrace.FrescoSystrace.endSection
 import com.facebook.imagepipeline.systrace.FrescoSystrace.isTracing
-import com.facebook.imageutils.BitmapUtil
 
 /** Configuration class for pools. */
 class PoolConfig private constructor(builder: Builder) {
@@ -145,8 +144,8 @@ class PoolConfig private constructor(builder: Builder) {
   }
 
   companion object {
-    const val BITMAP_POOL_MAX_BITMAP_SIZE_DEFAULT: Int =
-        1024 * 1024 * BitmapUtil.ARGB_8888_BYTES_PER_PIXEL
+    // = 1024 * 1024 * BitmapUtil.ARGB_8888_BYTES_PER_PIXEL (spelled out for source-only ABI)
+    const val BITMAP_POOL_MAX_BITMAP_SIZE_DEFAULT: Int = 1024 * 1024 * 4
 
     @JvmStatic
     fun newBuilder(): Builder {

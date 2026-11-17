@@ -31,7 +31,7 @@ public class SettableProducerContext extends BaseProducerContext {
         context.isPrefetch(),
         context.isIntermediateResultExpected(),
         context.getPriority(),
-        context.getImagePipelineConfig());
+        getImagePipelineConfigOrNull(context));
   }
 
   public SettableProducerContext(ImageRequest overrideRequest, ProducerContext context) {
@@ -46,7 +46,7 @@ public class SettableProducerContext extends BaseProducerContext {
         context.isPrefetch(),
         context.isIntermediateResultExpected(),
         context.getPriority(),
-        context.getImagePipelineConfig());
+        getImagePipelineConfigOrNull(context));
   }
 
   public SettableProducerContext(
@@ -58,7 +58,7 @@ public class SettableProducerContext extends BaseProducerContext {
       boolean isPrefetch,
       boolean isIntermediateResultExpected,
       Priority priority,
-      ImagePipelineConfigInterface imagePipelineConfig) {
+      @Nullable ImagePipelineConfigInterface imagePipelineConfig) {
     super(
         imageRequest,
         id,
@@ -81,7 +81,7 @@ public class SettableProducerContext extends BaseProducerContext {
       boolean isPrefetch,
       boolean isIntermediateResultExpected,
       Priority priority,
-      ImagePipelineConfigInterface imagePipelineConfig) {
+      @Nullable ImagePipelineConfigInterface imagePipelineConfig) {
     super(
         imageRequest,
         id,

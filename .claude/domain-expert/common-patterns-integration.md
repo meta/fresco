@@ -203,10 +203,10 @@ class DiskCacheReadProducer {
     }
 }
 
-// ✅ Correct: Primitive passed through ImageRequest/extras
+// ✅ Correct: Primitive passed through typed ImageRequest extras
 class DiskCacheReadProducer {
     fun produce(context: ProducerContext) {
-        val someFlag = context.imageRequest.extras["some_flag"] as? Boolean ?: false
+        val someFlag = context.imageRequest.getExtra(MY_FLAG) as? Boolean ?: false
         if (someFlag) { ... }
     }
 }

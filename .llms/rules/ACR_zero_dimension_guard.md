@@ -1,10 +1,13 @@
 ---
-oncalls: ['fresco']
+name: acr-zero-dimension-guard
 description: >
   Flag animation/rendering code that uses width or height without validating
   non-zero values first (D92552358, D92552368 crash fixes)
-apply_to_regex: 'libraries/fresco/.*\.(kt|java)$'
-apply_to_content: 'width|height|getFrame|loadFrame'
+metadata:
+  oncalls: ['fresco']
+  strict: true
+  apply_to_path: 'libraries/fresco/.*\.(kt|java)$'
+  apply_to_content: 'width|height|getFrame|loadFrame'
 ---
 
 # Missing Zero Dimension Guard in Animation/Rendering Code

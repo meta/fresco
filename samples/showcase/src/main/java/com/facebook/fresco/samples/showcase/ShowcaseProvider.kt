@@ -20,8 +20,7 @@ object ShowcaseProvider {
   lateinit var imageUriProvider: ImageUriProvider
     private set
 
-  lateinit var imageTracker: ImageTracker
-    private set
+  val imageTracker = ImageTracker()
 
   lateinit var imageSelector: ImageSelector
     private set
@@ -31,7 +30,6 @@ object ShowcaseProvider {
       return
     }
     imageUriProvider = ImageUriProvider(context.applicationContext)
-    imageTracker = ImageTracker()
     imageSelector =
         ImageSelector(
             imageTracker,

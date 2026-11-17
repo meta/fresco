@@ -12,6 +12,7 @@ import com.facebook.cache.common.CacheKey
 import com.facebook.cache.common.SimpleCacheKey
 import com.facebook.imagepipeline.common.ImageDecodeOptionsBuilder
 import com.facebook.imagepipeline.request.ImageRequest
+import com.facebook.imagepipeline.request.Postprocessor
 
 /**
  * A single cache key factory that can serve multiple apps (FB4A, IG, etc.) with different
@@ -27,6 +28,7 @@ constructor(
     private val config: CacheKeyConfig,
     private val hashEncodedKey: Boolean = true,
     private val encodedDimensionExtractor: DimensionExtractor? = null,
+    private val postprocessorCacheKeyOverride: ((Postprocessor) -> CacheKey?)? = null,
 ) : CacheKeyFactory {
 
   override fun getBitmapCacheKey(request: ImageRequest, callerContext: Any?): CacheKey {
@@ -42,7 +44,8 @@ constructor(
       createBitmapCacheKey(
           request,
           callerContext,
-          postprocessor.postprocessorCacheKey,
+          if (postprocessorCacheKeyOverride != null) postprocessorCacheKeyOverride(postprocessor)
+          else postprocessor.postprocessorCacheKey,
           postprocessor.javaClass.name,
       )
     } else {

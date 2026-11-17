@@ -207,7 +207,7 @@ class CountingLruMapTest {
     countingLruMap.put("key3", 130)
     countingLruMap.put("key4", 140)
 
-    val entries: MutableList<MutableMap.MutableEntry<String?, Int?>?> =
+    val entries: MutableList<MutableMap.MutableEntry<String?, Int?>> =
         countingLruMap.getMatchingEntries(
             object : Predicate<String?> {
               override fun apply(key: String): Boolean {

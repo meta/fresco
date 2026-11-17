@@ -69,15 +69,6 @@ interface VitoImagePipeline {
     throw UnsupportedOperationException("Method not implemented: evictFromCaches")
   }
 
-  /**
-   * Called by Vito when an image is released from a view. Implementations may use this to return
-   * the image to the bitmap memory cache for potential future reuse.
-   */
-  fun returnImageToCache(
-      imageRequest: VitoImageRequest,
-      imageReference: CloseableReference<CloseableImage>,
-  ) = Unit
-
   fun hintUnmodifiedUri(imageRequest: VitoImageRequest) = Unit
 
   fun determineFetchStrategy(

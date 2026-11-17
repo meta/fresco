@@ -19,6 +19,7 @@ import javax.annotation.concurrent.Immutable;
 /** Options for changing the behavior of the {@code ImageDecoder}. */
 @Immutable
 @Nullsafe(Nullsafe.Mode.LOCAL)
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class ImageDecodeOptions {
 
   public static boolean DISALLOW_RGB565 = false;

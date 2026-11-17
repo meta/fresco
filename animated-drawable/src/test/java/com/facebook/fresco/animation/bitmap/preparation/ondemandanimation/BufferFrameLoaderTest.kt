@@ -15,6 +15,7 @@ import com.facebook.fresco.animation.bitmap.BitmapFrameRenderer
 import com.facebook.fresco.animation.bitmap.preparation.loadframe.FpsCompressorInfo
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
@@ -64,6 +65,37 @@ class BufferFrameLoaderTest {
     verify(bitmapFrameRenderer, times(2)).renderFrame(0, bitmap)
     CloseableReference.closeSafely(reloadedResult.bitmapRef)
     frameLoader.clear()
+  }
+
+  @Test
+  fun getFrame_singleFrameRendererThrows_releasesCreatedBitmapOnceAndRethrows() {
+    val failedBitmapReference = CloseableReference.of(bitmap, bitmapReleaser)
+    val retriedBitmapReference = CloseableReference.of(bitmap, bitmapReleaser)
+    whenever(platformBitmapFactory.createBitmap(WIDTH, HEIGHT))
+        .thenReturn(failedBitmapReference, retriedBitmapReference)
+    val renderFailure = IllegalStateException("render failed")
+    whenever(bitmapFrameRenderer.renderFrame(any(), any()))
+        .thenThrow(renderFailure)
+        .thenReturn(true)
+    val frameLoader = createFrameLoader(frameCount = 1, enableSingleFrameRendering = true)
+
+    val thrown =
+        assertThrows(IllegalStateException::class.java) {
+          frameLoader.getFrame(frameNumber = 0, width = WIDTH, height = HEIGHT)
+        }
+
+    assertThat(thrown).isSameAs(renderFailure)
+    verify(bitmapReleaser, times(1)).release(bitmap)
+    assertThat(failedBitmapReference.isValid).isFalse
+
+    val retryResult = frameLoader.getFrame(frameNumber = 0, width = WIDTH, height = HEIGHT)
+
+    assertThat(retryResult.type).isEqualTo(FrameResult.FrameType.SUCCESS)
+    verify(platformBitmapFactory, times(2)).createBitmap(WIDTH, HEIGHT)
+    verify(bitmapReleaser, times(1)).release(bitmap)
+    CloseableReference.closeSafely(retryResult.bitmapRef)
+    frameLoader.clear()
+    verify(bitmapReleaser, times(2)).release(bitmap)
   }
 
   @Test

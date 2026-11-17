@@ -58,10 +58,10 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
    * all unusable files 2) avoid Samsung RFS problem that was hit with old implementations of
    * DiskStorage which used a single directory for all the files.
    */
-  private val mVersionDirectory: File
+  private val versionDirectory: File
 
   private val mCacheErrorLogger: CacheErrorLogger
-  private val mClock: Clock
+  private val clock: Clock
 
   /**
    * Instantiates a ShardedDiskStorage that will use the directory to save a map between keys and
@@ -79,15 +79,15 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
 
     mRootDirectory = rootDirectory
     mIsExternal = isExternal(rootDirectory, cacheErrorLogger)
-    // mVersionDirectory's name identifies:
+    // versionDirectory's name identifies:
     // - the cache structure's version (sharded)
     // - the content's version (version value)
     // if structure changes, prefix will change... if content changes version will be different
     // the ideal would be asking mSharding its name, but it's created receiving the directory
-    mVersionDirectory = File(mRootDirectory, getVersionSubdirectoryName(version))
+    versionDirectory = File(mRootDirectory, getVersionSubdirectoryName(version))
     mCacheErrorLogger = cacheErrorLogger
     recreateDirectoryIfVersionChanges()
-    mClock = SystemClock.get()
+    clock = SystemClock.get()
   }
 
   override fun isEnabled(): Boolean {
@@ -116,20 +116,20 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
     var recreateBase = false
     if (!mRootDirectory.exists()) {
       recreateBase = true
-    } else if (!mVersionDirectory.exists()) {
+    } else if (!versionDirectory.exists()) {
       recreateBase = true
       FileTree.deleteRecursively(mRootDirectory)
     }
 
     if (recreateBase) {
       try {
-        FileUtils.mkdirs(mVersionDirectory)
+        FileUtils.mkdirs(versionDirectory)
       } catch (e: FileUtils.CreateDirectoryException) {
         // not the end of the world, when saving files we will try to create missing parent dirs
         mCacheErrorLogger.logError(
             CacheErrorCategory.WRITE_CREATE_DIR,
             TAG,
-            "version directory could not be created: " + mVersionDirectory,
+            "version directory could not be created: " + versionDirectory,
             null,
         )
       }
@@ -153,7 +153,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
    */
   private fun getSubdirectoryPath(resourceId: String): String {
     val subdirectory = abs((resourceId.hashCode() % SHARDING_BUCKET_COUNT).toDouble()).toString()
-    return mVersionDirectory.toString() + File.separator + subdirectory
+    return versionDirectory.toString() + File.separator + subdirectory
   }
 
   /**
@@ -192,7 +192,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
   /**
    * This implements a [FileTreeVisitor] to iterate over all the files in mDirectory and delete any
    * unexpected file or directory. It also gets rid of any empty directory in the shard. As a
-   * shortcut it checks that things are inside (current) mVersionDirectory. If it's not then it's
+   * shortcut it checks that things are inside (current) versionDirectory. If it's not then it's
    * directly deleted. If it's inside then it checks if it's a recognized file and if it's in the
    * correct shard according to its name (checkShard method). If it's unexpected file is deleted.
    */
@@ -200,7 +200,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
     private var insideBaseDirectory = false
 
     override fun preVisitDirectory(directory: File?) {
-      if (!insideBaseDirectory && directory == mVersionDirectory) {
+      if (!insideBaseDirectory && directory == versionDirectory) {
         // if we enter version-directory turn flag on
         insideBaseDirectory = true
       }
@@ -219,7 +219,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
           directory!!.delete()
         }
       }
-      if (insideBaseDirectory && directory == mVersionDirectory) {
+      if (insideBaseDirectory && directory == versionDirectory) {
         // if we just finished visiting version-directory turn flag off
         insideBaseDirectory = false
       }
@@ -239,7 +239,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
 
     /** @return true if and only if the file is not old enough to be considered an old temp file */
     fun isRecentFile(file: File): Boolean {
-      return file.lastModified() > (mClock.now() - TEMP_FILE_LIFETIME_MS)
+      return file.lastModified() > (clock.now() - TEMP_FILE_LIFETIME_MS)
     }
   }
 
@@ -286,7 +286,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
   override fun getResource(resourceId: String, debugInfo: Any): BinaryResource? {
     val file = getContentFileFor(resourceId)
     if (file.exists()) {
-      file.setLastModified(mClock.now())
+      file.setLastModified(clock.now())
       return createOrNull(file)
     }
     return null
@@ -310,7 +310,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
     val contentFile = getContentFileFor(resourceId)
     val exists = contentFile.exists()
     if (touch && exists) {
-      contentFile.setLastModified(mClock.now())
+      contentFile.setLastModified(clock.now())
     }
     return exists
   }
@@ -412,7 +412,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
    */
   override fun getEntries(): MutableList<DiskStorage.Entry> {
     val collector = EntriesCollector()
-    FileTree.walkFileTree(mVersionDirectory, collector)
+    FileTree.walkFileTree(versionDirectory, collector)
     return collector.entries
   }
 
@@ -575,7 +575,7 @@ class DefaultDiskStorage(rootDirectory: File, version: Int, cacheErrorLogger: Ca
 
     @Throws(IOException::class)
     override fun commit(debugInfo: Any): BinaryResource {
-      return commit(debugInfo, mClock.now())
+      return commit(debugInfo, clock.now())
     }
 
     @Throws(IOException::class)

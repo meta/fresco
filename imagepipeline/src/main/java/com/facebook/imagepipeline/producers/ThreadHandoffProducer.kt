@@ -58,13 +58,15 @@ class ThreadHandoffProducer<T>(
   companion object {
     const val PRODUCER_NAME = "BackgroundThreadHandoffProducer"
 
+    private fun shouldRunImmediately(context: ProducerContext): Boolean {
+      return BaseProducerContext.getImagePipelineConfigOrNull(context)?.let {
+        !it.experiments.isCriticalThread()
+      } ?: false
+    }
+
     private fun getInstrumentationTag(context: ProducerContext): String? {
       return if (FrescoInstrumenter.isTracing) "ThreadHandoffProducer_produceResults_" + context.id
       else null
-    }
-
-    private fun shouldRunImmediately(context: ProducerContext): Boolean {
-      return !context.imagePipelineConfig.experiments.isCriticalThread()
     }
   }
 }

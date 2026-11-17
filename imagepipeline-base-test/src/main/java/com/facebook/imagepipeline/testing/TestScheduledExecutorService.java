@@ -22,6 +22,7 @@ public class TestScheduledExecutorService extends TestExecutorService
   }
 
   @Override
+  @SuppressWarnings("rawtypes")
   public ScheduledFuture<?> schedule(final Runnable runnable, long delay, TimeUnit timeUnit) {
     return new TestScheduledFuture(
         getFakeClock(), scheduledQueue, TimeUnit.MILLISECONDS.convert(delay, timeUnit), runnable);

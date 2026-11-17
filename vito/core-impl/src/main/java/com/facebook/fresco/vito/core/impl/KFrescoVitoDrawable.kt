@@ -90,8 +90,6 @@ class KFrescoVitoDrawable(
 
   var closeable: Closeable? by AutoCleanupDelegate(null, closeableCleanupFunction)
 
-  var offerBackOnRelease: (() -> Unit)? = null
-
   override var refetchRunnable: Runnable? = null
 
   var onFadeListener: OnFadeListener? = null
@@ -148,8 +146,6 @@ class KFrescoVitoDrawable(
   fun reset() {
     // Clear before the layers reset: ending their animators fires fade-end callbacks.
     onFadeListener = null
-    offerBackOnRelease?.invoke()
-    offerBackOnRelease = null
     imageRequest?.let { listenerManager.onRelease(imageId, it, obtainExtras()) }
     imagePerfListener.onImageRelease(this)
     ImageReleaseScheduler.cancelAllReleasing(this)
@@ -235,6 +231,8 @@ class KFrescoVitoDrawable(
   override fun setColorFilter(colorFilter: ColorFilter?) {
     drawableColorFilter = colorFilter
   }
+
+  override fun supportsColorFilter(): Boolean = false
 
   override fun getOpacity(): Int = PixelFormat.TRANSPARENT
 

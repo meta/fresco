@@ -11,8 +11,8 @@ import static com.bumptech.glide.load.resource.drawable.DrawableTransitionOption
 
 import android.content.Context;
 import android.view.View;
+import com.bumptech.glide.Glide;
 import com.facebook.samples.comparison.Drawables;
-import com.facebook.samples.comparison.configs.glide.GlideApp;
 import com.facebook.samples.comparison.instrumentation.InstrumentedImageView;
 import com.facebook.samples.comparison.instrumentation.PerfListener;
 
@@ -29,7 +29,7 @@ public class GlideHolder extends BaseViewHolder<InstrumentedImageView> {
 
   @Override
   protected void onBind(String uri) {
-    GlideApp.with(mImageView.getContext())
+    Glide.with(mImageView.getContext())
         .load(uri)
         .placeholder(Drawables.sPlaceholderDrawable)
         .error(Drawables.sErrorDrawable)

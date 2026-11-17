@@ -29,20 +29,48 @@ constructor(
     @JvmField val maxBitmapDimension: Float = BitmapUtil.MAX_BITMAP_DIMENSION,
     /* round-up fraction for resize process, defaults to DEFAULT_ROUNDUP_FRACTION */
     @JvmField val roundUpFraction: Float = DEFAULT_ROUNDUP_FRACTION,
+    /* Specify Transcoder behavior */
+    @JvmField val transcoder: Transcoder,
 ) {
+
+  @JvmOverloads
+  constructor(
+      width: Int,
+      height: Int,
+      maxBitmapDimension: Float = BitmapUtil.MAX_BITMAP_DIMENSION,
+      roundUpFraction: Float = DEFAULT_ROUNDUP_FRACTION,
+  ) : this(width, height, maxBitmapDimension, roundUpFraction, Transcoder.DEFAULT)
+
+  /** Transcoder to resize the encoded image with before the decode. */
+  enum class Transcoder {
+    /** Use the pipeline's setting. */
+    DEFAULT,
+
+    /** No resize transcode. The decode resizes the image by downsampling. */
+    NONE,
+
+    /**
+     * No resize transcode when the decode can sample a JPEG to the same scale as the transcode,
+     * which is 4/8, 2/8 or 1/8. Other scales use the pipeline's setting.
+     */
+    NONE_FOR_DECODE_SCALES,
+  }
 
   init {
     check(width > 0)
     check(height > 0)
   }
 
-  override fun hashCode(): Int = HashCodeUtil.hashCode(width, height)
+  override fun hashCode(): Int = HashCodeUtil.hashCode(width, height, transcoder)
 
   override fun equals(other: Any?): Boolean {
     if (other === this) {
       return true
     }
-    return other is ResizeOptions && width == other.width && height == other.height
+    return other is ResizeOptions &&
+        width == other.width &&
+        height == other.height &&
+        transcoder == other.transcoder
   }
 
   override fun toString(): String = String.format(null as Locale?, "%dx%d", width, height)

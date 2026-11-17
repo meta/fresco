@@ -106,6 +106,7 @@ dependencies {
     testImplementation TestDeps.assertjCore
 
     androidTestImplementation TestDeps.junit
+    androidTestImplementation TestDeps.AndroidX.testRunner
     androidTestImplementation TestDeps.mockitoCore
     androidTestImplementation(TestDeps.robolectric) {
         exclude group: 'commons-logging', module: 'commons-logging'

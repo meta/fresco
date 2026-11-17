@@ -71,6 +71,7 @@ public class ImagePipelineFactory {
 
   private static @Nullable ImagePipelineFactory sInstance = null;
   private static @Nullable ImagePipeline sImagePipeline;
+  private static @Nullable ImagePipeline sImagePipelineOverride;
   private final ThreadHandoffProducerQueue mThreadHandoffProducerQueue;
   private static boolean sForceSingleInstance;
   private static boolean sResetImagePipelineWhenFactoryChanges;
@@ -86,18 +87,51 @@ public class ImagePipelineFactory {
     return sInstance;
   }
 
+  /** Returns the registered pipeline, including one supplied without a factory or config. */
+  @Nullable
+  public static synchronized ImagePipeline getImagePipelineOrNull() {
+    if (sImagePipelineOverride != null) {
+      return sImagePipelineOverride;
+    }
+    return sInstance == null ? null : sInstance.getImagePipeline();
+  }
+
+  /**
+   * Registers a pipeline without constructing a factory and returns the active pipeline. Access the
+   * pipeline through {@link #getImagePipelineOrNull()}; this does not initialize a factory.
+   * Consumers that require a factory, such as Drawee's default setup, are not supported. Replacing
+   * a directly registered pipeline clears its memory caches.
+   */
+  public static synchronized ImagePipeline initialize(ImagePipeline imagePipeline) {
+    Preconditions.checkNotNull(imagePipeline);
+    if (sForceSingleInstance && hasImagePipeline()) {
+      return Preconditions.checkNotNull(getImagePipelineOrNull());
+    }
+    if (sImagePipelineOverride != imagePipeline) {
+      clearImagePipelineOverride();
+    }
+    sInstance = null;
+    sImagePipeline = null;
+    sImagePipelineOverride = imagePipeline;
+    return imagePipeline;
+  }
+
   /**
    * Overrides current instance with a new one. Usually used when dealing with multiple
    * ImagePipelineFactories
    *
    * @param newInstance
    */
-  public static void setInstance(ImagePipelineFactory newInstance) {
+  public static synchronized void setInstance(ImagePipelineFactory newInstance) {
+    clearImagePipelineOverride();
     sInstance = newInstance;
   }
 
   /** Initializes {@link ImagePipelineFactory} with default config. */
   public static synchronized void initialize(Context context) {
+    if (sForceSingleInstance && sInstance != null) {
+      return;
+    }
     if (FrescoSystrace.isTracing()) {
       FrescoSystrace.beginSection("ImagePipelineFactory#initialize");
     }
@@ -121,6 +155,7 @@ public class ImagePipelineFactory {
     }
 
     sInstance = new ImagePipelineFactory(imagePipelineConfig);
+    clearImagePipelineOverride();
     if (sResetImagePipelineWhenFactoryChanges) {
       sImagePipeline = null;
     }
@@ -139,17 +174,30 @@ public class ImagePipelineFactory {
     sResetImagePipelineWhenFactoryChanges = resetImagePipelineWhenFactoryChanges;
   }
 
-  /** Checks if {@link ImagePipelineFactory} has already been initialized */
+  /** Checks whether a factory is available through {@link #getInstance()}. */
   public static synchronized boolean hasBeenInitialized() {
     return sInstance != null;
   }
 
+  /** Checks whether a pipeline is available through {@link #getImagePipelineOrNull()}. */
+  public static synchronized boolean hasImagePipeline() {
+    return sInstance != null || sImagePipelineOverride != null;
+  }
+
   /** Shuts {@link ImagePipelineFactory} down. */
   public static synchronized void shutDown() {
+    clearImagePipelineOverride();
     if (sInstance != null) {
       sInstance.getBitmapMemoryCache().removeAll(AndroidPredicates.<CacheKey>True());
       sInstance.getEncodedMemoryCache().removeAll(AndroidPredicates.<CacheKey>True());
       sInstance = null;
+    }
+  }
+
+  private static void clearImagePipelineOverride() {
+    if (sImagePipelineOverride != null) {
+      sImagePipelineOverride.clearMemoryCaches();
+      sImagePipelineOverride = null;
     }
   }
 

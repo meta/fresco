@@ -37,6 +37,7 @@ public class SizePreferences extends Preference implements SeekBar.OnSeekBarChan
 
   private int mMaxValue;
 
+  @SuppressWarnings("this-escape")
   public SizePreferences(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
     super(context, attrs, defStyleAttr, defStyleRes);
     setLayoutResource(R.layout.size_preference);

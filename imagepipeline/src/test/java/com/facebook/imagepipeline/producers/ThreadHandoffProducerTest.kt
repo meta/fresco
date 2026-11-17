@@ -80,6 +80,50 @@ class ThreadHandoffProducerTest {
   }
 
   @Test
+  fun contextWithoutConfigUsesHandoff() {
+    val context = SettableProducerContext(
+        imageRequest,
+        requestId,
+        producerListener,
+        null,
+        ImageRequest.RequestLevel.FULL_FETCH,
+        false,
+        false,
+        Priority.MEDIUM,
+        null,
+    )
+
+    for (requestContext in listOf(context, object : ProducerContext by context {})) {
+      threadHandoffProducer.produceResults(consumer, requestContext)
+
+      Mockito.verify(inputProducer, Mockito.never()).produceResults(consumer, requestContext)
+      testExecutorService.runUntilIdle()
+      Mockito.verify(inputProducer).produceResults(consumer, requestContext)
+    }
+  }
+
+  @Test
+  fun contextWithoutConfigCanCancelBeforeHandoff() {
+    val context = SettableProducerContext(
+        imageRequest,
+        requestId,
+        producerListener,
+        null,
+        ImageRequest.RequestLevel.FULL_FETCH,
+        false,
+        false,
+        Priority.MEDIUM,
+        null,
+    )
+    threadHandoffProducer.produceResults(consumer, context)
+    context.cancel()
+    testExecutorService.runUntilIdle()
+
+    Mockito.verify(inputProducer, Mockito.never()).produceResults(consumer, context)
+    Mockito.verify(consumer).onCancellation()
+  }
+
+  @Test
   fun testCancellation() {
     threadHandoffProducer.produceResults(consumer, producerContext)
     producerContext.cancel()

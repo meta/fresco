@@ -91,6 +91,21 @@ class ContextChainTest {
   }
 
   @Test
+  fun testSerializeToCachedStringList() {
+    val contextChain = ContextChain(
+        "child_tag",
+        "child_name",
+        ContextChain("root_tag", "root_name", null),
+    )
+
+    val first = contextChain.toStringArrayCached()
+    val second = contextChain.toStringArrayCached()
+
+    assertThat(first).containsExactly("root_tag:root_name", "child_tag:child_name")
+    assertThat(second).isSameAs(first)
+  }
+
+  @Test
   fun testSerializedContextChainToArray() {
     val contextChain =
         ContextChain("root_tag:root_name/child_tag:child_name/grandchild_tag:grandchild_name", null)

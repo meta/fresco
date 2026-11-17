@@ -38,6 +38,9 @@ import com.facebook.imageutils.BitmapUtil;
 import com.facebook.infer.annotation.Nullsafe;
 import com.facebook.memory.helper.HashCode;
 import java.io.File;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
@@ -139,6 +142,9 @@ public class ImageRequest {
   /** Whether to extract first frame thumbnail from video. */
   private final Boolean mIsFirstFrameThumbnailEnabled;
 
+  /** App-defined data carried on this request, null if there is none. Fresco does not read it. */
+  private final @Nullable Map<ImageRequestExtra<?>, Object> mExtras;
+
   public static @Nullable ImageRequest fromFile(@Nullable File file) {
     return (file == null) ? null : ImageRequest.fromUri(UriUtil.getUriForFile(file));
   }
@@ -201,6 +207,9 @@ public class ImageRequest {
     mCustomCacheKey = builder.getCustomCacheKey();
 
     mIsFirstFrameThumbnailEnabled = builder.getIsFirstFrameThumbnailEnabled();
+
+    Map<ImageRequestExtra<?>, Object> extras = builder.getExtras();
+    mExtras = extras == null || extras.isEmpty() ? null : new HashMap<>(extras);
   }
 
   public CacheChoice getCacheChoice() {
@@ -337,6 +346,17 @@ public class ImageRequest {
     return mIsFirstFrameThumbnailEnabled;
   }
 
+  /** Returns the extra set for the given key, or null if there is none. */
+  @SuppressWarnings("unchecked")
+  public @Nullable <T> T getExtra(ImageRequestExtra<T> key) {
+    return mExtras == null ? null : (T) mExtras.get(key);
+  }
+
+  /** Returns all extras carried on this request, or null if there are none. */
+  public @Nullable Map<ImageRequestExtra<?>, Object> getExtras() {
+    return mExtras == null ? null : Collections.unmodifiableMap(mExtras);
+  }
+
   @Override
   public boolean equals(@Nullable Object other) {
     if (!(other instanceof ImageRequest)) {
@@ -377,7 +397,46 @@ public class ImageRequest {
     final CacheKey thatPostprocessorKey =
         request.mPostprocessor != null ? request.mPostprocessor.getPostprocessorCacheKey() : null;
     if (!Objects.equal(thisPostprocessorKey, thatPostprocessorKey)) return false;
+    if (!equalityExtrasEqual(mExtras, request.mExtras)) return false;
     return mDelayMs == request.mDelayMs;
+  }
+
+  private static boolean equalityExtrasEqual(
+      @Nullable Map<ImageRequestExtra<?>, Object> a,
+      @Nullable Map<ImageRequestExtra<?>, Object> b) {
+    if (a == b) {
+      return true;
+    }
+    return containsEqualityExtrasOf(a, b) && containsEqualityExtrasOf(b, a);
+  }
+
+  private static boolean containsEqualityExtrasOf(
+      @Nullable Map<ImageRequestExtra<?>, Object> container,
+      @Nullable Map<ImageRequestExtra<?>, Object> extras) {
+    if (extras == null) {
+      return true;
+    }
+    for (Map.Entry<ImageRequestExtra<?>, Object> entry : extras.entrySet()) {
+      if (entry.getKey().getAffectsEquality()
+          && (container == null
+              || !Objects.equal(entry.getValue(), container.get(entry.getKey())))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static int equalityExtrasHashCode(@Nullable Map<ImageRequestExtra<?>, Object> extras) {
+    if (extras == null) {
+      return 0;
+    }
+    int hash = 0;
+    for (Map.Entry<ImageRequestExtra<?>, Object> entry : extras.entrySet()) {
+      if (entry.getKey().getAffectsEquality()) {
+        hash += entry.getKey().hashCode() ^ entry.getValue().hashCode();
+      }
+    }
+    return hash;
   }
 
   @Override
@@ -411,6 +470,10 @@ public class ImageRequest {
       result = HashCode.extend(result, mLoadThumbnailOnly);
       result = HashCode.extend(result, mIsFirstFrameThumbnailEnabled);
       // ^ I *think* this is safe despite autoboxing...?
+      int extrasHashCode = equalityExtrasHashCode(mExtras);
+      if (extrasHashCode != 0) {
+        result = HashCode.extend(result, extrasHashCode);
+      }
       if (cacheHashcode) {
         mHashcode = result;
       }
@@ -442,6 +505,7 @@ public class ImageRequest {
         .add("customCacheKey", mCustomCacheKey)
         .add("delayMs", mDelayMs)
         .add("isFirstFrameThumbnailEnabled", mIsFirstFrameThumbnailEnabled)
+        .add("extras", mExtras)
         .toString();
   }
 
