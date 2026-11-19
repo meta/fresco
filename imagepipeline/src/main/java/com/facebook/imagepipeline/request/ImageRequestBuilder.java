@@ -653,8 +653,11 @@ public class ImageRequestBuilder {
 
     // For local asset we require caller to specify absolute path of an asset, which will be
     // resolved by AssetManager relative to configured asset folder of an app.
-    if (UriUtil.isLocalAssetUri(sourceUri) && !sourceUri.isAbsolute()) {
-      throw new BuilderException("Asset URI path must be absolute.");
+    if (UriUtil.isLocalAssetUri(sourceUri)) {
+      final String assetPath = sourceUri.getPath();
+      if (assetPath == null || !assetPath.startsWith("/")) {
+        throw new BuilderException("Asset URI path must be absolute.");
+      }
     }
   }
 }
