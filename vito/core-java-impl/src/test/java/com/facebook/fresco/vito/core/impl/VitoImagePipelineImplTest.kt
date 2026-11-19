@@ -7,15 +7,23 @@
 
 package com.facebook.fresco.vito.core.impl
 
+import android.graphics.Rect
 import android.net.Uri
 import com.facebook.common.callercontext.ContextChain
 import com.facebook.common.references.CloseableReference
+import com.facebook.fresco.middleware.HasExtraData
 import com.facebook.fresco.urimod.ClassicFetchStrategy
+import com.facebook.fresco.urimod.Dimensions
+import com.facebook.fresco.urimod.FetchStrategy
 import com.facebook.fresco.urimod.NoPrefetchInOnPrepareStrategy
 import com.facebook.fresco.urimod.SmartFetchStrategy
+import com.facebook.fresco.urimod.UriModifier
+import com.facebook.fresco.urimod.UriModifierInterface
+import com.facebook.fresco.urimod.UriModifierInterface.ModificationResult
 import com.facebook.fresco.vito.core.FrescoVitoConfig
 import com.facebook.fresco.vito.core.ImagePipelineUtils
 import com.facebook.fresco.vito.core.VitoImageRequest
+import com.facebook.fresco.vito.options.ImageOptions
 import com.facebook.fresco.vito.source.SingleImageSourceImpl
 import com.facebook.fresco.vito.source.SmartFetchOptIn
 import com.facebook.fresco.vito.source.SmartImageSource
@@ -28,7 +36,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
@@ -291,6 +301,69 @@ class VitoImagePipelineImplTest {
 
     // Robolectric runs on main thread, so main thread check kicks in
     assertThat(result).isEqualTo(SmartFetchStrategy.MAIN_THREAD)
+  }
+
+  // --- createImageRequestForViewport ---
+
+  @Test
+  fun createImageRequestForViewport_optInNoFallback_sizesUriForViewportWithFallbackDisabled() {
+    enableSmartFetchDefaults()
+    whenever(config.experimentalDynamicSizeWithCacheFallbackVito2()).thenReturn(true)
+    val sizedUri = Uri.parse("https://scontent.xx.fbcdn.net/image.jpg?cstp=1&ctp=s1080x1080")
+    val uriModifier: UriModifierInterface = mock()
+    whenever(uriModifier.modifyUri(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull()))
+        .thenReturn(ModificationResult.Modified.ModifiedToAllowlistedSize(sizedUri, 1080))
+    val defaultUriModifier = UriModifier.INSTANCE
+    UriModifier.INSTANCE = uriModifier
+    try {
+      val request =
+          vitoImagePipeline.createImageRequestForViewport(
+              mock(),
+              SmartImageSource(testUri, smartFetchOptIn = SmartFetchOptIn.ENABLED_NO_FALLBACK),
+              ImageOptions.defaults(),
+              Rect(0, 0, 1080, 748),
+              callerContext,
+              contextChain,
+          )
+
+      assertThat(request.getExtra<FetchStrategy>(HasExtraData.KEY_SF_FETCH_STRATEGY))
+          .isEqualTo(SmartFetchStrategy.FALLBACK_DISABLED)
+      assertThat(request.viewport).isEqualTo(Dimensions(1080, 748))
+      val imageSource = request.imageSource as SmartImageSource
+      assertThat(imageSource.imageUri).isEqualTo(sizedUri)
+      assertThat(imageSource.smartFetchOptIn).isEqualTo(SmartFetchOptIn.ENABLED_NO_FALLBACK)
+      verify(uriModifier)
+          .modifyUri(
+              any(),
+              eq(Dimensions(1080, 748)),
+              anyOrNull(),
+              eq(callerContext),
+              eq(contextChain),
+          )
+    } finally {
+      UriModifier.INSTANCE = defaultUriModifier
+    }
+  }
+
+  @Test
+  fun createImageRequestForViewport_appDisabled_keepsImageSourceWithClassicStrategy() {
+    whenever(config.experimentalDynamicSizeVito2()).thenReturn(false)
+    val imageSource =
+        SmartImageSource(testUri, smartFetchOptIn = SmartFetchOptIn.ENABLED_NO_FALLBACK)
+
+    val request =
+        vitoImagePipeline.createImageRequestForViewport(
+            mock(),
+            imageSource,
+            ImageOptions.defaults(),
+            Rect(0, 0, 1080, 748),
+            callerContext,
+            contextChain,
+        )
+
+    assertThat(request.getExtra<FetchStrategy>(HasExtraData.KEY_SF_FETCH_STRATEGY))
+        .isEqualTo(ClassicFetchStrategy.APP_DISABLED)
+    assertThat(request.imageSource).isSameAs(imageSource)
   }
 
   private fun enableSmartFetchDefaults() {

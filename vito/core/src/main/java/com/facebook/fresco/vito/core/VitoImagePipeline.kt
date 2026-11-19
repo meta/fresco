@@ -76,4 +76,41 @@ interface VitoImagePipeline {
       callerContext: Any?,
       contextChain: ContextChain?,
   ): FetchStrategy = ClassicFetchStrategy.DEFAULT
+
+  /**
+   * Creates the request for an image whose [viewport] is known before the fetch, for a renderer
+   * without a layout pass of its own, such as a drawable or a view. It asks
+   * [determineFetchStrategy] for the strategy of the request and creates the request with that
+   * strategy, so Smart Fetch sizes the URI for [viewport] when the strategy allows it. Pass the
+   * same viewport to [FrescoController2.fetch].
+   */
+  fun createImageRequestForViewport(
+      resources: Resources,
+      imageSource: ImageSource,
+      options: ImageOptions?,
+      viewport: Rect,
+      callerContext: Any?,
+      contextChain: ContextChain?,
+      logWithHighSamplingRate: Boolean = false,
+  ): VitoImageRequest {
+    val requestWithoutStrategy = createImageRequest(
+        resources,
+        imageSource,
+        options,
+        logWithHighSamplingRate,
+        viewport,
+        callerContext,
+        contextChain,
+    )
+    return createImageRequest(
+        resources,
+        imageSource,
+        options,
+        logWithHighSamplingRate,
+        viewport,
+        callerContext,
+        contextChain,
+        determineFetchStrategy(requestWithoutStrategy, callerContext, contextChain),
+    )
+  }
 }
