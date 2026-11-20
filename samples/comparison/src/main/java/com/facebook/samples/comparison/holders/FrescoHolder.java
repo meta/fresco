@@ -15,18 +15,18 @@ import com.facebook.fresco.vito.options.ImageOptions;
 import com.facebook.fresco.vito.source.ImageSourceProvider;
 import com.facebook.fresco.vito.view.VitoView;
 import com.facebook.imagepipeline.common.ResizeOptions;
-import com.facebook.samples.comparison.instrumentation.InstrumentedDraweeView;
+import com.facebook.samples.comparison.instrumentation.InstrumentedVitoView;
 import com.facebook.samples.comparison.instrumentation.PerfListener;
 
 /** This is the Holder class for the RecycleView to use with Fresco */
-public class FrescoHolder extends BaseViewHolder<InstrumentedDraweeView> {
+public class FrescoHolder extends BaseViewHolder<InstrumentedVitoView> {
 
   public FrescoHolder(
       Context context,
       View parentView,
-      InstrumentedDraweeView intrumentedDraweeView,
+      InstrumentedVitoView instrumentedVitoView,
       PerfListener perfListener) {
-    super(context, parentView, intrumentedDraweeView, perfListener);
+    super(context, parentView, instrumentedVitoView, perfListener);
   }
 
   @Override

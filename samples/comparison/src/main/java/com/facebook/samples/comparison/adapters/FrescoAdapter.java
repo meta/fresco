@@ -16,7 +16,7 @@ import com.facebook.fresco.vito.init.FrescoVito;
 import com.facebook.fresco.vito.options.ImageOptions;
 import com.facebook.imagepipeline.core.ImagePipelineConfig;
 import com.facebook.samples.comparison.holders.FrescoHolder;
-import com.facebook.samples.comparison.instrumentation.InstrumentedDraweeView;
+import com.facebook.samples.comparison.instrumentation.InstrumentedVitoView;
 import com.facebook.samples.comparison.instrumentation.PerfListener;
 
 /** RecyclerView Adapter for Fresco */
@@ -37,10 +37,10 @@ public class FrescoAdapter extends ImageListAdapter {
             .errorRes(android.R.drawable.ic_menu_report_image)
             .scale(ScalingUtils.ScaleType.FIT_CENTER)
             .build();
-    final InstrumentedDraweeView instrView = new InstrumentedDraweeView(getContext(), imageOptions);
-    instrView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    final InstrumentedVitoView vitoView = new InstrumentedVitoView(getContext(), imageOptions);
+    vitoView.setScaleType(ImageView.ScaleType.FIT_CENTER);
 
-    return new FrescoHolder(getContext(), parent, instrView, getPerfListener());
+    return new FrescoHolder(getContext(), parent, vitoView, getPerfListener());
   }
 
   @Override

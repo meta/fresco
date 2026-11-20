@@ -22,31 +22,31 @@ import javax.annotation.Nullable;
 
 /** {@link ImageView} with instrumentation using Vito. */
 @SuppressWarnings("this-escape")
-public class InstrumentedDraweeView extends ImageView implements Instrumented {
+public class InstrumentedVitoView extends ImageView implements Instrumented {
 
   private Instrumentation mInstrumentation;
   private ImageListener mListener;
   private ImageOptions mImageOptions;
 
-  public InstrumentedDraweeView(Context context, ImageOptions imageOptions) {
+  public InstrumentedVitoView(Context context, ImageOptions imageOptions) {
     super(context);
     mImageOptions = imageOptions;
     init();
   }
 
-  public InstrumentedDraweeView(Context context) {
+  public InstrumentedVitoView(Context context) {
     super(context);
     mImageOptions = ImageOptions.defaults();
     init();
   }
 
-  public InstrumentedDraweeView(Context context, AttributeSet attrs) {
+  public InstrumentedVitoView(Context context, AttributeSet attrs) {
     super(context, attrs);
     mImageOptions = ImageOptions.defaults();
     init();
   }
 
-  public InstrumentedDraweeView(Context context, AttributeSet attrs, int defStyle) {
+  public InstrumentedVitoView(Context context, AttributeSet attrs, int defStyle) {
     super(context, attrs, defStyle);
     mImageOptions = ImageOptions.defaults();
     init();
