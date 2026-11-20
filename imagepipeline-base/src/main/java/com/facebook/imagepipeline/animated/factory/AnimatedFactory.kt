@@ -12,6 +12,6 @@ import com.facebook.imagepipeline.drawable.DrawableFactory
 import javax.annotation.concurrent.NotThreadSafe
 
 @NotThreadSafe
-interface AnimatedFactory {
+fun interface AnimatedFactory {
   fun getAnimatedDrawableFactory(context: Context?): DrawableFactory?
 }
