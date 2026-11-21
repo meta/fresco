@@ -28,7 +28,9 @@ object CacheKeyUtil {
           }
         } else {
           ids = ArrayList(1)
-          ids.add(if (key.isResourceIdForDebugging) key.uriString else secureHashKey(key))
+          ids.add(
+              if (key.isResourceIdForDebugging) checkNotNull(key.uriString) else secureHashKey(key),
+          )
         }
         ids
       } catch (e: UnsupportedEncodingException) {
@@ -55,5 +57,5 @@ object CacheKeyUtil {
 
   @Throws(UnsupportedEncodingException::class)
   private fun secureHashKey(key: CacheKey): String =
-      SecureHashUtil.makeSHA1HashBase64(key.uriString.toByteArray(charset("UTF-8")))
+      SecureHashUtil.makeSHA1HashBase64(checkNotNull(key.uriString).toByteArray(charset("UTF-8")))
 }

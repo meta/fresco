@@ -69,7 +69,7 @@ class FlipperImageTracker : DebugImageTracker, ImagePerfDataListener {
         return imageRequest.sourceUri.toString()
       }
     }
-    return key.uriString
+    return checkNotNull(key.uriString)
   }
 
   @Synchronized

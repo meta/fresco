@@ -37,8 +37,10 @@ public interface CacheKey {
 
   /**
    * Returns a string representation of the URI at the heart of the cache key. In cases of multiple
-   * keys being contained, the first is returned.
+   * keys being contained, the first is returned. Returns null for keys that have no URI, such as
+   * animated frame keys.
    */
+  @Nullable
   String getUriString();
 
   /**

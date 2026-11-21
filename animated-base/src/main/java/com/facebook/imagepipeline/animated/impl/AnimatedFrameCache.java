@@ -71,7 +71,6 @@ public class AnimatedFrameCache {
     }
 
     @Override
-    // NULLSAFE_FIXME[Inconsistent Subclass Return Annotation]
     public @Nullable String getUriString() {
       return null;
     }
