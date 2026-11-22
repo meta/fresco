@@ -58,6 +58,7 @@
   <string name="imagepipeline_postprocessor_set_round_as_circle">Round As Circle Post-Processor</string>
   <string name="imagepipeline_postprocessor_set_round_as_aa_circle">Antialiased Circle Post-Processor</string>
   <string name="imagepipeline_postprocessor_set_rounded_corners">Rounded Corners Post-Processor</string>
+  <string name="imagepipeline_postprocessor_set_ellipse">Ellipse Post-Processor</string>
   <string name="imagepipeline_postprocessor_refresh">Refresh</string>
 
   <string name="imagepipeline_prefetch_help">1. Clear the cache\n2. Toggle images, they show slowly\n3. Hide the images\n4. Clear the cache\n5. Prefetch\n6. Show the images, they load fast!</string>

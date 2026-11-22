@@ -34,6 +34,7 @@ import com.facebook.fresco.samples.showcase.postprocessor.WatermarkPostprocessor
 import com.facebook.fresco.vito.options.ImageOptions;
 import com.facebook.fresco.vito.view.VitoView;
 import com.facebook.imagepipeline.postprocessors.BlurPostProcessor;
+import com.facebook.imagepipeline.postprocessors.EllipsePostprocessor;
 import com.facebook.imagepipeline.postprocessors.IterativeBoxBlurPostProcessor;
 import com.facebook.imagepipeline.postprocessors.RoundAsCirclePostprocessor;
 import com.facebook.imagepipeline.postprocessors.RoundPostprocessor;
@@ -198,6 +199,10 @@ public class ImagePipelinePostProcessorFragment extends BaseShowcaseFragment
             R.string.imagepipeline_postprocessor_set_rounded_corners,
             new BenchmarkPostprocessorForDuplicatedBitmapInPlace(
                 this, new RoundedCornersPostprocessor())),
+        new Entry(
+            R.string.imagepipeline_postprocessor_set_ellipse,
+            new BenchmarkPostprocessorForDuplicatedBitmapInPlace(
+               this, new EllipsePostprocessor())),
         new Entry(
             R.string.imagepipeline_postprocessor_set_round_as_circle,
             new BenchmarkPostprocessorForDuplicatedBitmap(this, new RoundPostprocessor())));
