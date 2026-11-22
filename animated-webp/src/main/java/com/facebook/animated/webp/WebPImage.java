@@ -166,7 +166,7 @@ public class WebPImage implements AnimatedImage, AnimatedImageDecoder {
 
   @Override
   public boolean doesRenderSupportScaling() {
-    return true;
+    return false;
   }
 
   @Override
