@@ -83,6 +83,44 @@ object VitoSpanLoader {
     fetchCommand()
   }
 
+  /**
+   * Sets up [target] as [show] does, without starting the request. [DeferredFetchVitoSpan] says
+   * when it starts. A text that is built but never attached or drawn makes no request.
+   */
+  @JvmStatic
+  fun showWhenAttachedOrDrawn(
+      imageSource: ImageSource,
+      imageOptions: ImageOptions,
+      logWithHighSamplingRate: Boolean,
+      callerContext: Any?,
+      contextChain: ContextChain?,
+      imageListener: ImageListener?,
+      target: DeferredFetchVitoSpan,
+  ) {
+    val imageRequest =
+        FrescoVitoProvider.getImagePipeline()
+            .createImageRequest(
+                target.resources,
+                imageSource,
+                imageOptions,
+                logWithHighSamplingRate,
+            )
+    target.imageFetchCommand = {
+      target.isFetchPending = false
+      FrescoVitoProvider.getController()
+          .fetch(
+              drawable = target.drawableInterface,
+              imageRequest = imageRequest,
+              callerContext = callerContext,
+              contextChain = contextChain,
+              listener = imageListener,
+              onFadeListener = null,
+              viewportDimensions = null,
+          )
+    }
+    target.isFetchPending = true
+  }
+
   @JvmStatic
   fun release(target: VitoSpan?) {
     target?.let { FrescoVitoProvider.getController().releaseImmediately(target.drawableInterface) }

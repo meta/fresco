@@ -31,6 +31,9 @@ dependencies {
     implementation project(':vito:options')
     implementation project(':vito:textspan')
 
+    testImplementation project(':middleware')
+    testImplementation project(':urimod')
+    testImplementation project(':vito:provider')
     testImplementation TestDeps.assertjCore
     testImplementation TestDeps.junit
     testImplementation TestDeps.festAssertCore

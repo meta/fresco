@@ -22,6 +22,7 @@ import com.facebook.fresco.vito.core.FrescoDrawableInterface;
 import com.facebook.fresco.vito.draweesupport.ControllerListenerWrapper;
 import com.facebook.fresco.vito.options.ImageOptions;
 import com.facebook.fresco.vito.source.ImageSource;
+import com.facebook.fresco.vito.textspan.DeferredFetchVitoSpan;
 import com.facebook.fresco.vito.textspan.VitoSpan;
 import com.facebook.fresco.vito.textspan.VitoSpanLoader;
 import com.facebook.imagepipeline.image.ImageInfo;
@@ -138,6 +139,63 @@ public class DraweeSpanStringBuilder extends SpannableStringBuilder
             new VitoDrawableChangedListener(span, enableResizing, drawableHeightPx)),
         span);
     setSpan(span, startIndex, endIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE);
+  }
+
+  /**
+   * Same as {@link #setImageVitoSpan(Context, ImageSource, ImageOptions, Object, int, int, int,
+   * int, boolean, int)}, except that the image request does not start now. It starts when this
+   * builder is attached, or as {@link DeferredFetchVitoSpan} says when nothing attaches it.
+   */
+  public void setDeferredFetchImageVitoSpan(
+      Context context,
+      ImageSource imageSource,
+      ImageOptions imageOptions,
+      Object callerContext,
+      int startIndex,
+      int endIndex,
+      final int drawableWidthPx,
+      final int drawableHeightPx,
+      boolean enableResizing,
+      @BetterImageSpan.BetterImageSpanAlignment int verticalAlignment) {
+    if (endIndex >= length()) {
+      return;
+    }
+    FrescoDrawableInterface drawableInterface = VitoSpanLoader.INSTANCE.createDrawable();
+    Drawable topLevelDrawable = (Drawable) drawableInterface;
+    if (topLevelDrawable.getBounds().isEmpty()) {
+      topLevelDrawable.setBounds(0, 0, drawableWidthPx, drawableHeightPx);
+    }
+    DeferredFetchVitoSpan span =
+        new DeferredFetchVitoSpan(
+            context.getResources(),
+            drawableInterface,
+            verticalAlignment,
+            new BetterImageSpan(topLevelDrawable, verticalAlignment),
+            mDrawableCallback);
+    mVitoSpans.add(span);
+    VitoSpanLoader.showWhenAttachedOrDrawn(
+        imageSource,
+        imageOptions,
+        false,
+        callerContext,
+        null,
+        ControllerListenerWrapper.create(
+            new VitoDrawableChangedListener(span, enableResizing, drawableHeightPx)),
+        span);
+    setSpan(span, startIndex, endIndex + 1, SPAN_EXCLUSIVE_EXCLUSIVE);
+  }
+
+  /**
+   * Takes over the {@link DeferredFetchVitoSpan}s in this text, such as those of another builder
+   * whose text was copied into this one: this builder's attach starts their requests, its detach
+   * releases them, and their drawables invalidate what this builder is bound to.
+   */
+  public void adoptDeferredFetchVitoSpans() {
+    for (DeferredFetchVitoSpan span : getSpans(0, length(), DeferredFetchVitoSpan.class)) {
+      if (mVitoSpans.add(span)) {
+        ((Drawable) span.getDrawableInterface()).setCallback(mDrawableCallback);
+      }
+    }
   }
 
   public void vitoSpanShow(
