@@ -9,6 +9,7 @@ package com.facebook.fresco.vito.drawable
 
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
@@ -134,5 +135,81 @@ class RoundingUtilsTest {
     assertThat((result as RoundedNinePatchDrawable).borderWidth).isEqualTo(borderOptions.width)
     assertThat(result.borderColor).isEqualTo(borderOptions.color)
     assertThat(result.isCircle).isTrue
+  }
+
+  @Test
+  fun testRoundedDrawable_withBitmap_thenFiltersOnlyWhenAsked() {
+    val bitmap = mock<Bitmap>()
+    val borderOptions = BorderOptions.create(Color.YELLOW, 10f)
+    val shapes = listOf<Pair<BorderOptions?, RoundingOptions?>>(
+        null to RoundingOptions.asCircle(),
+        null to RoundingOptions.forCornerRadiusPx(8f),
+        borderOptions to RoundingOptions.forCornerRadii(1f, 2f, 3f, 4f),
+        borderOptions to null,
+    )
+
+    shapes.forEach { (border, rounding) ->
+      val filtered =
+          RoundingUtils.roundedDrawable(resources, bitmap, border, rounding, filterBitmap = true)
+      val unfiltered = RoundingUtils.roundedDrawable(resources, bitmap, border, rounding)
+      assertThat((filtered as RoundedBitmapDrawable).paintFilterBitmap).isTrue
+      assertThat((unfiltered as RoundedBitmapDrawable).paintFilterBitmap).isFalse
+    }
+  }
+
+  @Test
+  fun testRoundedDrawable_withDrawable_thenFiltersOnlyRoundedBitmaps() {
+    val borderOptions = BorderOptions.create(Color.YELLOW, 10f)
+    val roundingOptions = RoundingOptions.asCircle()
+
+    val bitmap =
+        RoundingUtils.roundedDrawable(
+            resources,
+            mock<BitmapDrawable>(),
+            null,
+            roundingOptions,
+            filterBitmap = true,
+        )
+    val bitmapWithBorder =
+        RoundingUtils.roundedDrawable(
+            resources,
+            mock<BitmapDrawable>(),
+            borderOptions,
+            roundingOptions,
+            filterBitmap = true,
+        )
+    val color =
+        RoundingUtils.roundedDrawable(
+            resources,
+            mock<ColorDrawable>(),
+            null,
+            roundingOptions,
+            filterBitmap = true,
+        )
+
+    assertThat((bitmap as RoundedBitmapDrawable).paintFilterBitmap).isTrue
+    assertThat((bitmapWithBorder as RoundedBitmapDrawable).paintFilterBitmap).isTrue
+    assertThat((color as RoundedColorDrawable).paintFilterBitmap).isFalse
+  }
+
+  @Test
+  fun testRoundedDrawable_whenDrawnWithFilterBitmap_thenPaintFiltersBitmap() {
+    val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(Bitmap.createBitmap(4, 4, Bitmap.Config.ARGB_8888))
+    val roundingOptions = RoundingOptions.forCornerRadiusPx(2f)
+    val filtered =
+        RoundingUtils.roundedDrawable(resources, bitmap, null, roundingOptions, filterBitmap = true)
+            as RoundedBitmapDrawable
+    val unfiltered =
+        RoundingUtils.roundedDrawable(resources, bitmap, null, roundingOptions)
+            as RoundedBitmapDrawable
+
+    listOf(filtered, unfiltered).forEach { drawable ->
+      drawable.setBounds(0, 0, 4, 4)
+      drawable.draw(canvas)
+    }
+
+    assertThat(filtered.paint.isFilterBitmap).isTrue
+    assertThat(unfiltered.paint.isFilterBitmap).isFalse
   }
 }

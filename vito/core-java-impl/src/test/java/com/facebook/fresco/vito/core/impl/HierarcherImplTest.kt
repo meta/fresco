@@ -242,6 +242,29 @@ class HierarcherImplTest {
     hierarcher.buildOverlayDrawable(resources, options)
   }
 
+  @Test
+  fun testApplyRoundingOptions_whenFilterRoundedBitmaps_thenFiltersRoundedBitmap() {
+    val drawable = mock<BitmapDrawable>()
+    whenever(drawable.bitmap).thenReturn(mock<Bitmap>())
+    val rounded = ImageOptions.create().round(RoundingOptions.forCornerRadiusPx(123f))
+
+    val filtered =
+        hierarcher.applyRoundingOptions(
+            resources,
+            drawable,
+            rounded.filterRoundedBitmaps(true).build(),
+        )
+    val unfiltered =
+        hierarcher.applyRoundingOptions(
+            resources,
+            drawable,
+            rounded.filterRoundedBitmaps(false).build(),
+        )
+
+    assertThat((filtered as RoundedBitmapDrawable).paintFilterBitmap).isTrue()
+    assertThat((unfiltered as RoundedBitmapDrawable).paintFilterBitmap).isFalse()
+  }
+
   companion object {
     private const val RES_ID = 123
     private const val INVALID_RES_ID = 999

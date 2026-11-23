@@ -7,10 +7,12 @@
 
 package com.facebook.fresco.vito.drawable
 
+import android.annotation.TargetApi
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.util.DisplayMetrics
 import com.facebook.drawee.drawable.RoundedBitmapDrawable
 import com.facebook.fresco.vito.options.BorderOptions
@@ -26,6 +28,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 class BitmapDrawableFactoryTest {
@@ -135,5 +138,109 @@ class BitmapDrawableFactoryTest {
     assertThat(drawable).isNotNull
     assertThat(drawable).isInstanceOf(CircularBorderBitmapDrawable::class.java)
     assertThat((drawable as CircularBorderBitmapDrawable?)?.border).isEqualTo(borderOptions)
+  }
+
+  @Test
+  @Config(sdk = [Build.VERSION_CODES.P])
+  @TargetApi(Build.VERSION_CODES.O)
+  fun testCreateDrawable_whenHardwareBitmapNotRoundedAtDecode_thenRoundsAtRenderTime() {
+    val closeableImage = hardwareBitmapImage()
+    val borderOptions = BorderOptions.create(Color.YELLOW, 10f)
+
+    val circle = createRoundedDrawable(closeableImage, RoundingOptions.asCircle(), null)
+    val circleWithBorder =
+        createRoundedDrawable(closeableImage, RoundingOptions.asCircle(), borderOptions)
+    val corners = createRoundedDrawable(closeableImage, RoundingOptions.forCornerRadiusPx(8f), null)
+    val cornersWithBorder =
+        createRoundedDrawable(closeableImage, RoundingOptions.forCornerRadiusPx(8f), borderOptions)
+
+    assertThat(circle.isCircle).isTrue()
+    assertThat(circleWithBorder.isCircle).isTrue()
+    assertThat(circleWithBorder.borderWidth).isEqualTo(10f)
+    assertThat(corners.radii).isEqualTo(FloatArray(8) { 8f })
+    assertThat(cornersWithBorder.radii).isEqualTo(FloatArray(8) { 8f })
+    assertThat(cornersWithBorder.borderWidth).isEqualTo(10f)
+    listOf(circle, circleWithBorder, corners, cornersWithBorder).forEach { drawable ->
+      assertThat(drawable.bitmap?.config).isEqualTo(Bitmap.Config.HARDWARE)
+      assertThat(drawable.paintFilterBitmap).isFalse()
+    }
+  }
+
+  @Test
+  @Config(sdk = [Build.VERSION_CODES.P])
+  fun testCreateDrawable_whenFilterRoundedBitmaps_thenFiltersRoundedBitmapDrawable() {
+    val closeableImage = hardwareBitmapImage()
+    val borderOptions = BorderOptions.create(Color.YELLOW, 10f)
+
+    listOf(
+        createRoundedDrawable(closeableImage, RoundingOptions.asCircle(), null, filter = true),
+        createRoundedDrawable(
+            closeableImage,
+            RoundingOptions.forCornerRadiusPx(8f),
+            borderOptions,
+            filter = true,
+        ),
+        createRoundedDrawable(closeableImage, null, borderOptions, filter = true),
+    )
+        .forEach { drawable -> assertThat(drawable.paintFilterBitmap).isTrue() }
+  }
+
+  @Test
+  @Config(sdk = [Build.VERSION_CODES.P])
+  fun testCreateDrawable_whenFilterRoundedBitmapsAndNotRounded_thenReturnBitmapDrawable() {
+    val options = mock<ImageOptions>()
+    whenever(options.filterRoundedBitmaps).thenReturn(true)
+    val drawable = drawableFactory.createDrawable(resources, hardwareBitmapImage(), options)
+
+    assertThat(drawable).isExactlyInstanceOf(BitmapDrawable::class.java)
+  }
+
+  @Test
+  @Config(sdk = [Build.VERSION_CODES.P])
+  fun testCreateDrawable_whenDefaultsFilterRoundedBitmaps_thenRequestCanOptOut() {
+    val originalDefaults = ImageOptions.defaults()
+    try {
+      ImageOptions.setDefaults(originalDefaults.extend().filterRoundedBitmaps(true).build())
+      val rounded = ImageOptions.create().round(RoundingOptions.forCornerRadiusPx(8f))
+
+      val fromDefaults =
+          drawableFactory.createDrawable(resources, hardwareBitmapImage(), rounded.build())
+      val optedOut =
+          drawableFactory.createDrawable(
+              resources,
+              hardwareBitmapImage(),
+              rounded.filterRoundedBitmaps(false).build(),
+          )
+
+      assertThat((fromDefaults as RoundedBitmapDrawable).paintFilterBitmap).isTrue()
+      assertThat((optedOut as RoundedBitmapDrawable).paintFilterBitmap).isFalse()
+    } finally {
+      ImageOptions.setDefaults(originalDefaults)
+    }
+  }
+
+  @TargetApi(Build.VERSION_CODES.O)
+  private fun hardwareBitmapImage(): CloseableStaticBitmap {
+    val bitmap = mock<Bitmap>()
+    whenever(bitmap.config).thenReturn(Bitmap.Config.HARDWARE)
+    val closeableImage = mock<CloseableStaticBitmap>()
+    whenever(closeableImage.underlyingBitmap).thenReturn(bitmap)
+    whenever(closeableImage.extras).thenReturn(imageExtrasNotRounded)
+    return closeableImage
+  }
+
+  private fun createRoundedDrawable(
+      closeableImage: CloseableStaticBitmap,
+      roundingOptions: RoundingOptions?,
+      borderOptions: BorderOptions?,
+      filter: Boolean = false,
+  ): RoundedBitmapDrawable {
+    val options = mock<ImageOptions>()
+    whenever(options.roundingOptions).thenReturn(roundingOptions)
+    whenever(options.borderOptions).thenReturn(borderOptions)
+    whenever(options.filterRoundedBitmaps).thenReturn(filter)
+    val drawable = drawableFactory.createDrawable(resources, closeableImage, options)
+    assertThat(drawable).isExactlyInstanceOf(RoundedBitmapDrawable::class.java)
+    return drawable as RoundedBitmapDrawable
   }
 }

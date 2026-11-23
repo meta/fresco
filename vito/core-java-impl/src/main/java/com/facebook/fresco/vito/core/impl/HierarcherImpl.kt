@@ -76,7 +76,13 @@ open class HierarcherImpl(private val drawableFactory: ImageOptionsDrawableFacto
   ): Drawable {
     val roundingOptions = imageOptions.roundingOptions
     val borderOptions = imageOptions.borderOptions
-    return RoundingUtils.roundedDrawable(resources, drawable, borderOptions, roundingOptions)
+    return RoundingUtils.roundedDrawable(
+        resources,
+        drawable,
+        borderOptions,
+        roundingOptions,
+        imageOptions.filterRoundedBitmaps,
+    )
   }
 
   override fun buildProgressDrawable(resources: Resources, imageOptions: ImageOptions): Drawable? {

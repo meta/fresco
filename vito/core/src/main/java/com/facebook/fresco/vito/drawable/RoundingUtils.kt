@@ -41,18 +41,21 @@ object RoundingUtils {
    * @param bitmap a bitmap to be wrapped in the final [BitmapDrawable]
    * @param borderOptions border options for the given image
    * @param roundingOptions rounding options for the given image
+   * @param filterBitmap whether a [RoundedBitmapDrawable] filters the bitmap when it's scaled
    * @return a drawable with the applied effect
    */
+  @JvmOverloads
   fun roundedDrawable(
       resources: Resources,
       bitmap: Bitmap,
       borderOptions: BorderOptions?,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean = false,
   ): Drawable =
       if (borderOptions != null && borderOptions.width > 0) {
-        roundedDrawableWithBorder(resources, bitmap, borderOptions, roundingOptions)
+        roundedDrawableWithBorder(resources, bitmap, borderOptions, roundingOptions, filterBitmap)
       } else {
-        roundedDrawableWithoutBorder(resources, bitmap, roundingOptions)
+        roundedDrawableWithoutBorder(resources, bitmap, roundingOptions, filterBitmap)
       }
 
   /**
@@ -61,29 +64,33 @@ object RoundingUtils {
    * @param drawable the image to transform
    * @param borderOptions border options for the given image
    * @param roundingOptions rounding options for the given image
+   * @param filterBitmap whether a [RoundedBitmapDrawable] filters the bitmap when it's scaled
    * @return a drawable with the applied effect
    */
+  @JvmOverloads
   fun roundedDrawable(
       resources: Resources,
       drawable: Drawable,
       borderOptions: BorderOptions?,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean = false,
   ): Drawable =
       if (borderOptions != null && borderOptions.width > 0) {
-        roundedDrawableWithBorder(resources, drawable, borderOptions, roundingOptions)
+        roundedDrawableWithBorder(resources, drawable, borderOptions, roundingOptions, filterBitmap)
       } else {
-        roundedDrawableWithoutBorder(resources, drawable, roundingOptions)
+        roundedDrawableWithoutBorder(resources, drawable, roundingOptions, filterBitmap)
       }
 
   private fun roundedDrawableWithoutBorder(
       resources: Resources,
       bitmap: Bitmap,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean,
   ): Drawable =
       if (roundingOptions == null) {
         BitmapDrawable(resources, bitmap)
       } else {
-        applyRounding(getRoundedDrawable(resources, bitmap), null, roundingOptions)
+        applyRounding(getRoundedDrawable(resources, bitmap, filterBitmap), null, roundingOptions)
       }
 
   private fun roundedDrawableWithBorder(
@@ -91,20 +98,26 @@ object RoundingUtils {
       bitmap: Bitmap,
       borderOptions: BorderOptions,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean,
   ): Drawable =
       if (roundingOptions == null) {
-        squareDrawableWithBorder(getRoundedDrawable(resources, bitmap), borderOptions)
+        squareDrawableWithBorder(getRoundedDrawable(resources, bitmap, filterBitmap), borderOptions)
       } else {
-        applyRounding(getRoundedDrawable(resources, bitmap), borderOptions, roundingOptions)
+        applyRounding(
+            getRoundedDrawable(resources, bitmap, filterBitmap),
+            borderOptions,
+            roundingOptions,
+        )
       }
 
   private fun roundedDrawableWithoutBorder(
       resources: Resources,
       drawable: Drawable,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean,
   ): Drawable =
       if (roundingOptions != null) {
-        applyRounding(getRoundedDrawable(resources, drawable), null, roundingOptions)
+        applyRounding(getRoundedDrawable(resources, drawable, filterBitmap), null, roundingOptions)
       } else {
         drawable
       }
@@ -114,18 +127,29 @@ object RoundingUtils {
       drawable: Drawable,
       borderOptions: BorderOptions,
       roundingOptions: RoundingOptions?,
+      filterBitmap: Boolean,
   ): Drawable =
       if (roundingOptions == null) {
-        squareDrawableWithBorder(getRoundedDrawable(resources, drawable), borderOptions)
+        squareDrawableWithBorder(
+            getRoundedDrawable(resources, drawable, filterBitmap),
+            borderOptions,
+        )
       } else {
-        applyRounding(getRoundedDrawable(resources, drawable), borderOptions, roundingOptions)
+        applyRounding(
+            getRoundedDrawable(resources, drawable, filterBitmap),
+            borderOptions,
+            roundingOptions,
+        )
       }
 
   @Suppress("UNCHECKED_CAST")
-  private fun <T> getRoundedDrawable(resources: Resources, drawable: Drawable): T
-      where T : Drawable, T : Rounded =
+  private fun <T> getRoundedDrawable(
+      resources: Resources,
+      drawable: Drawable,
+      filterBitmap: Boolean,
+  ): T where T : Drawable, T : Rounded =
       when (drawable) {
-        is BitmapDrawable -> getRoundedDrawable(resources, drawable.bitmap)
+        is BitmapDrawable -> getRoundedDrawable(resources, drawable.bitmap, filterBitmap)
         is NinePatchDrawable -> RoundedNinePatchDrawable(drawable) as T
         is ColorDrawable -> RoundedColorDrawable.fromColorDrawable(drawable) as T
         else -> RoundedCornersDrawable(drawable) as T
@@ -148,8 +172,12 @@ object RoundingUtils {
       roundedCornerDrawable(drawable, borderOptions, null)
 
   @Suppress("UNCHECKED_CAST")
-  private fun <T> getRoundedDrawable(resources: Resources, bitmap: Bitmap?): T
-      where T : Drawable, T : Rounded = RoundedBitmapDrawable(resources, bitmap) as T
+  private fun <T> getRoundedDrawable(
+      resources: Resources,
+      bitmap: Bitmap?,
+      filterBitmap: Boolean,
+  ): T where T : Drawable, T : Rounded =
+      RoundedBitmapDrawable(resources, bitmap).apply { paintFilterBitmap = filterBitmap } as T
 
   private fun <T> circularDrawable(drawable: T, borderOptions: BorderOptions?): Drawable
       where T : Drawable, T : Rounded {

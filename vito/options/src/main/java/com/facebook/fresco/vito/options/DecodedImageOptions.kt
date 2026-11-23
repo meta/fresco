@@ -38,6 +38,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
   val isProgressiveDecodingEnabled: Boolean? = builder.progressiveDecodingEnabled
   val isFirstFrameThumbnailEnabled: Boolean = builder.isFirstFrameThumbnailEnabled
   val roundHardwareBitmapsAtRenderTime: Boolean = builder.roundHardwareBitmapsAtRenderTime
+  val filterRoundedBitmaps: Boolean = builder.filterRoundedBitmaps
 
   fun areLocalThumbnailPreviewsEnabled(): Boolean = localThumbnailPreviewsEnabled
 
@@ -72,7 +73,8 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
             isProgressiveDecodingEnabled != other.isProgressiveDecodingEnabled ||
             !Objects.equal(bitmapConfig, other.bitmapConfig) ||
             isFirstFrameThumbnailEnabled != other.isFirstFrameThumbnailEnabled ||
-            roundHardwareBitmapsAtRenderTime != other.roundHardwareBitmapsAtRenderTime
+            roundHardwareBitmapsAtRenderTime != other.roundHardwareBitmapsAtRenderTime ||
+            filterRoundedBitmaps != other.filterRoundedBitmaps
     ) {
       false
     } else equalEncodedOptions(other)
@@ -99,6 +101,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
     result = (31 * result + (isProgressiveDecodingEnabled?.hashCode() ?: 0))
     result = 31 * result + if (isFirstFrameThumbnailEnabled) 1 else 0
     result = 31 * result + if (roundHardwareBitmapsAtRenderTime) 1 else 0
+    result = 31 * result + if (filterRoundedBitmaps) 1 else 0
     return result
   }
 
@@ -125,6 +128,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
           .add("progressiveRenderingEnabled", isProgressiveDecodingEnabled)
           .add("isFirstFrameThumbnailEnabled", isFirstFrameThumbnailEnabled)
           .add("roundHardwareBitmapsAtRenderTime", roundHardwareBitmapsAtRenderTime)
+          .add("filterRoundedBitmaps", filterRoundedBitmaps)
 
   open class Builder<T : Builder<T>> : EncodedImageOptions.Builder<T> {
     internal var resizeOptions: ResizeOptions? = null
@@ -146,6 +150,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
     internal var progressiveDecodingEnabled: Boolean? = null
     internal var isFirstFrameThumbnailEnabled: Boolean = false
     internal var roundHardwareBitmapsAtRenderTime: Boolean = false
+    internal var filterRoundedBitmaps: Boolean = false
 
     constructor() : super()
 
@@ -170,6 +175,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
       progressiveDecodingEnabled = decodedImageOptions.isProgressiveDecodingEnabled
       isFirstFrameThumbnailEnabled = decodedImageOptions.isFirstFrameThumbnailEnabled
       roundHardwareBitmapsAtRenderTime = decodedImageOptions.roundHardwareBitmapsAtRenderTime
+      filterRoundedBitmaps = decodedImageOptions.filterRoundedBitmaps
     }
 
     constructor(defaultOptions: ImageOptions) : this(defaultOptions as DecodedImageOptions)
@@ -277,6 +283,11 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
      */
     fun roundHardwareBitmapsAtRenderTime(roundHardwareBitmapsAtRenderTime: Boolean): T = modify {
       this.roundHardwareBitmapsAtRenderTime = roundHardwareBitmapsAtRenderTime
+    }
+
+    /** Filters the bitmap when a rounded bitmap is scaled, instead of sampling nearest-neighbor. */
+    fun filterRoundedBitmaps(filterRoundedBitmaps: Boolean): T = modify {
+      this.filterRoundedBitmaps = filterRoundedBitmaps
     }
 
     override fun build(): DecodedImageOptions = DecodedImageOptions(this)

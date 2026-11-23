@@ -77,6 +77,7 @@ class BitmapDrawableFactory : ImageOptionsDrawableFactory {
               bitmap,
               borderOptions,
               roundingOptions,
+              imageOptions.filterRoundedBitmaps,
           )
         }
     return rotatedDrawable(closeableStaticBitmap, drawable)
