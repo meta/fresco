@@ -37,6 +37,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
   val bitmapConfig: BitmapConfig? = builder.bitmapConfig
   val isProgressiveDecodingEnabled: Boolean? = builder.progressiveDecodingEnabled
   val isFirstFrameThumbnailEnabled: Boolean = builder.isFirstFrameThumbnailEnabled
+  val roundHardwareBitmapsAtRenderTime: Boolean = builder.roundHardwareBitmapsAtRenderTime
 
   fun areLocalThumbnailPreviewsEnabled(): Boolean = localThumbnailPreviewsEnabled
 
@@ -70,7 +71,8 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
             loadThumbnailOnly != other.loadThumbnailOnly ||
             isProgressiveDecodingEnabled != other.isProgressiveDecodingEnabled ||
             !Objects.equal(bitmapConfig, other.bitmapConfig) ||
-            isFirstFrameThumbnailEnabled != other.isFirstFrameThumbnailEnabled
+            isFirstFrameThumbnailEnabled != other.isFirstFrameThumbnailEnabled ||
+            roundHardwareBitmapsAtRenderTime != other.roundHardwareBitmapsAtRenderTime
     ) {
       false
     } else equalEncodedOptions(other)
@@ -96,6 +98,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
     result = 31 * result + (bitmapConfig?.hashCode() ?: 0)
     result = (31 * result + (isProgressiveDecodingEnabled?.hashCode() ?: 0))
     result = 31 * result + if (isFirstFrameThumbnailEnabled) 1 else 0
+    result = 31 * result + if (roundHardwareBitmapsAtRenderTime) 1 else 0
     return result
   }
 
@@ -121,6 +124,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
           .add("bitmapConfig", bitmapConfig)
           .add("progressiveRenderingEnabled", isProgressiveDecodingEnabled)
           .add("isFirstFrameThumbnailEnabled", isFirstFrameThumbnailEnabled)
+          .add("roundHardwareBitmapsAtRenderTime", roundHardwareBitmapsAtRenderTime)
 
   open class Builder<T : Builder<T>> : EncodedImageOptions.Builder<T> {
     internal var resizeOptions: ResizeOptions? = null
@@ -141,6 +145,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
     internal var bitmapConfig: BitmapConfig? = null
     internal var progressiveDecodingEnabled: Boolean? = null
     internal var isFirstFrameThumbnailEnabled: Boolean = false
+    internal var roundHardwareBitmapsAtRenderTime: Boolean = false
 
     constructor() : super()
 
@@ -164,6 +169,7 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
       bitmapConfig = decodedImageOptions.bitmapConfig
       progressiveDecodingEnabled = decodedImageOptions.isProgressiveDecodingEnabled
       isFirstFrameThumbnailEnabled = decodedImageOptions.isFirstFrameThumbnailEnabled
+      roundHardwareBitmapsAtRenderTime = decodedImageOptions.roundHardwareBitmapsAtRenderTime
     }
 
     constructor(defaultOptions: ImageOptions) : this(defaultOptions as DecodedImageOptions)
@@ -262,6 +268,15 @@ open class DecodedImageOptions(builder: Builder<*>) : EncodedImageOptions(builde
      */
     fun isFirstFrameThumbnailEnabled(isFirstFrameThumbnailEnabled: Boolean): T = modify {
       this.isFirstFrameThumbnailEnabled = isFirstFrameThumbnailEnabled
+    }
+
+    /**
+     * Keeps a HARDWARE bitmap config when the image is rounded and rounds it when it's drawn,
+     * instead of decoding a software bitmap. Leave it off for images drawn to a software canvas.
+     * Requests with a custom drawable factory still decode a software bitmap.
+     */
+    fun roundHardwareBitmapsAtRenderTime(roundHardwareBitmapsAtRenderTime: Boolean): T = modify {
+      this.roundHardwareBitmapsAtRenderTime = roundHardwareBitmapsAtRenderTime
     }
 
     override fun build(): DecodedImageOptions = DecodedImageOptions(this)

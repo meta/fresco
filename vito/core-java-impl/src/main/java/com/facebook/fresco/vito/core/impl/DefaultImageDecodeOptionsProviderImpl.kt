@@ -13,6 +13,7 @@ import com.facebook.fresco.vito.core.impl.ImagePipelineUtilsImpl.CircularBitmapR
 import com.facebook.fresco.vito.core.impl.ImagePipelineUtilsImpl.ImageDecodeOptionsProvider
 import com.facebook.fresco.vito.options.BitmapConfig
 import com.facebook.fresco.vito.options.DecodedImageOptions
+import com.facebook.fresco.vito.options.ImageOptions
 import com.facebook.fresco.vito.options.RoundingOptions
 import com.facebook.imagepipeline.common.ImageDecodeOptions
 import com.facebook.imagepipeline.request.ImageRequestBuilder
@@ -45,7 +46,15 @@ class DefaultImageDecodeOptionsProviderImpl(
       // Check if animation should be disabled
       val forceStaticImage = animatedOptions?.isAnimationDisabled() == true
       if (bitmapConfig != null) {
-        if (imageOptions.roundingOptions != null || imageOptions.postprocessor != null) {
+        // The pipeline can't round a HARDWARE bitmap at decode time, so the drawable rounds it.
+        val roundAtRenderTime =
+            imageOptions.roundHardwareBitmapsAtRenderTime &&
+                (imageOptions as? ImageOptions)?.customDrawableFactory == null &&
+                pipelineRoundingUnsupportedForBitmapConfig(bitmapConfig)
+        if (
+            (imageOptions.roundingOptions != null && !roundAtRenderTime) ||
+                imageOptions.postprocessor != null
+        ) {
           FLog.wtf(TAG, "Trying to use bitmap config incompatible with rounding.")
         } else {
           return ImageDecodeOptions.newBuilder()
