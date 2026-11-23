@@ -181,6 +181,12 @@ interface FrescoVitoConfig {
   fun useReleaseDelayedInCompose(): Boolean = false
 
   /**
+   * Whether Compose images release their image by default while their composition's lifecycle is
+   * stopped, and fetch it again when it starts.
+   */
+  fun releaseComposeImagesWhileStopped(): Boolean = false
+
+  /**
    * Skips writing the Compose painter's `drawableIntrinsicSize` snapshot state when the drawable's
    * intrinsic size has not actually changed. For a `KFrescoVitoDrawable` it never changes — nothing
    * calls `setIntrinsicSize`, so it stays `Size.Unspecified` — which makes every write on

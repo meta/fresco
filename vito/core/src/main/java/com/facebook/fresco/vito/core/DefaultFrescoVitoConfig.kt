@@ -126,6 +126,8 @@ constructor(override val prefetchConfig: PrefetchConfig = DefaultPrefetchConfig(
 
   override fun useReleaseDelayedInCompose(): Boolean = false
 
+  override fun releaseComposeImagesWhileStopped(): Boolean = false
+
   override fun skipRedundantIntrinsicSizeWrites(): Boolean = false
 
   override fun enablePrefetchTelemetry(): Boolean = false
