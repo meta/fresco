@@ -111,6 +111,10 @@ object JfifUtil {
       // read block length
       // subtract 2 as length contain SIZE field we just read
       val length = StreamProcessor.readPackedInt(inputStream, 2, false) - 2
+      // The length field counts its own two bytes, so a smaller value means the data is malformed.
+      if (length < 0) {
+        return false
+      }
       // Skip other markers.
       inputStream.skip(length.toLong())
     }

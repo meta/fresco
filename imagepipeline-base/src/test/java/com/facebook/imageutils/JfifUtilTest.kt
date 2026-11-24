@@ -7,6 +7,8 @@
 
 package com.facebook.imageutils
 
+import com.facebook.common.memory.PooledByteBufferInputStream
+import com.facebook.imagepipeline.testing.TrivialPooledByteBuffer
 import com.facebook.imageutils.JfifTestUtils.APP0
 import com.facebook.imageutils.JfifTestUtils.APP2
 import com.facebook.imageutils.JfifTestUtils.DHT
@@ -43,6 +45,23 @@ class JfifUtilTest {
   fun testGetOrientation_NoAPP1() {
     assertThat(JfifUtil.getOrientation(hexStringToByteArray(noOriImage1))).isEqualTo(0)
     assertThat(JfifUtil.getOrientation(hexStringToByteArray(noOriImage2))).isEqualTo(0)
+  }
+
+  @Test
+  fun testGetOrientation_SegmentLengthBelowTwo() {
+    val app1: String =
+        makeAPP1_EXIF(makeTiff(makeIfd(arrayOf(makeOrientationEntry(6, false)), 0, false), false))
+    // A COM segment with the given length field, ahead of an APP1 block with orientation 6.
+    fun image(comLength: String): ByteArray =
+        hexStringToByteArray(SOI + "FFFE" + comLength + app1 + DQT + DHT + SOF + SOS + EOI)
+    fun pooledStream(bytes: ByteArray) = PooledByteBufferInputStream(TrivialPooledByteBuffer(bytes))
+
+    assertThat(JfifUtil.getOrientation(image("0002"))).isEqualTo(6)
+    assertThat(JfifUtil.getOrientation(pooledStream(image("0002")))).isEqualTo(6)
+    for (comLength in listOf("0000", "0001")) {
+      assertThat(JfifUtil.getOrientation(image(comLength))).isEqualTo(0)
+      assertThat(JfifUtil.getOrientation(pooledStream(image(comLength)))).isEqualTo(0)
+    }
   }
 
   @Test
