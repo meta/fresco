@@ -186,8 +186,9 @@ class AbstractAdaptiveCountingMemoryCacheTest {
             2,
             initialLFUCacheFractionPromil,
         )
-    cache.cache(KEY, newReference(100), entryStateObserver)
+    val cachedRef = cache.cache(KEY, newReference(100), entryStateObserver)
     verify(entryStateObserver, never()).onExclusivityChanged(anyOrNull<String>(), anyBoolean())
+    cachedRef?.close()
   }
 
   @Test
