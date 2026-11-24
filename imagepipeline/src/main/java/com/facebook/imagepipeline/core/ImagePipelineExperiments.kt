@@ -501,7 +501,7 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
     fun build(): ImagePipelineExperiments = ImagePipelineExperiments(this)
   }
 
-  interface ProducerFactoryMethod {
+  fun interface ProducerFactoryMethod {
     fun createProducerFactory(
         context: Context,
         byteArrayPool: ByteArrayPool,
