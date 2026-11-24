@@ -31,7 +31,8 @@ data class CacheKeyConfig(
      * Optional filter applied to resize options before they are included in the bitmap cache key.
      * Receives the [SourceUriType] and the original [ResizeOptions].
      */
-    val resizeOptionsFilter: ((Int, ResizeOptions?) -> ResizeOptions?)? = null,
+    val resizeOptionsFilter: ((Int, ResizeOptions?) -> @JvmSuppressWildcards ResizeOptions?)? =
+        null,
     /** Extracts image dimensions from a request for encoded cache key generation. */
     val dimensionExtractor: DimensionExtractor? = null,
     /** Optional enricher for encoded cache keys (e.g. adding caller context metadata). */
