@@ -326,7 +326,13 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
               if (contextToCancel != null) {
                 if (mKeepCancelledFetchAsLowPriority && !contextToCancel.isPrefetch()) {
                   List<ProducerContextCallbacks> callbacks =
-                      contextToCancel.setPriorityNoCallbacks(Priority.LOW);
+                      mConfig != null
+                              && mConfig
+                                  .getExperiments()
+                                  .getFixEncodedMultiplexLatePriorityDemotion()
+                                  .get()
+                          ? demoteCancelledFetchIfOrphaned(contextToCancel)
+                          : contextToCancel.setPriorityNoCallbacks(Priority.LOW);
                   BaseProducerContext.callOnPriorityChanged(callbacks);
                 } else {
                   contextToCancel.cancel();
@@ -353,6 +359,15 @@ public abstract class MultiplexProducer<K, T extends Closeable> implements Produ
               BaseProducerContext.callOnPriorityChanged(updatePriority());
             }
           });
+    }
+
+    @Nullable
+    private synchronized List<ProducerContextCallbacks> demoteCancelledFetchIfOrphaned(
+        BaseProducerContext context) {
+      if (mMultiplexProducerContext != context || !mConsumerContextPairs.isEmpty()) {
+        return null;
+      }
+      return context.setPriorityNoCallbacks(Priority.LOW);
     }
 
     /**

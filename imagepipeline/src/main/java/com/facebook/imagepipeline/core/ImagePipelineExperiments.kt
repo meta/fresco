@@ -62,6 +62,7 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
   val throttlingProducerMaxSimultaneousRequests: Long
   val memoryType: Long
   val keepCancelledFetchAsLowPriority: Boolean
+  val fixEncodedMultiplexLatePriorityDemotion: Supplier<Boolean>
   val downsampleIfLargeBitmap: Boolean
   val isEncodedCacheEnabled: Boolean
   val isEnsureTranscoderLibraryLoaded: Boolean
@@ -137,6 +138,8 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
 
     @JvmField var memoryType: Long = 0
     @JvmField var keepCancelledFetchAsLowPriority = false
+    @JvmField
+    var fixEncodedMultiplexLatePriorityDemotion: Supplier<Boolean> = Suppliers.BOOLEAN_FALSE
 
     @JvmField var downsampleIfLargeBitmap = false
 
@@ -362,6 +365,10 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
 
     fun setKeepCancelledFetchAsLowPriority(keepCancelledFetchAsLowPriority: Boolean) = asBuilder {
       this.keepCancelledFetchAsLowPriority = keepCancelledFetchAsLowPriority
+    }
+
+    fun setFixEncodedMultiplexLatePriorityDemotion(enabled: Supplier<Boolean>) = asBuilder {
+      fixEncodedMultiplexLatePriorityDemotion = enabled
     }
 
     fun setDownsampleIfLargeBitmap(downsampleIfLargeBitmap: Boolean) = asBuilder {
@@ -604,6 +611,7 @@ class ImagePipelineExperiments private constructor(builder: Builder) {
     throttlingProducerMaxSimultaneousRequests = builder.throttlingProducerMaxSimultaneousRequests
     memoryType = builder.memoryType
     keepCancelledFetchAsLowPriority = builder.keepCancelledFetchAsLowPriority
+    fixEncodedMultiplexLatePriorityDemotion = builder.fixEncodedMultiplexLatePriorityDemotion
     downsampleIfLargeBitmap = builder.downsampleIfLargeBitmap
     isEncodedCacheEnabled = builder.encodedCacheEnabled
     isEnsureTranscoderLibraryLoaded = builder.ensureTranscoderLibraryLoaded

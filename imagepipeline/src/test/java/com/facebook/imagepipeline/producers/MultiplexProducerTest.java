@@ -646,6 +646,47 @@ public class MultiplexProducerTest {
   }
 
   @Test
+  public void testLateCancellationDemotesJoinedFetchWithFixOff() {
+    checkCancellationPriority(false, true, Priority.LOW);
+  }
+
+  @Test
+  public void testLateCancellationKeepsJoinedFetchHighWithFixOn() {
+    checkCancellationPriority(true, true, Priority.HIGH);
+  }
+
+  @Test
+  public void testCancellationStillDemotesAnOrphanedFetchWithFixOn() {
+    checkCancellationPriority(true, false, Priority.LOW);
+  }
+
+  private void checkCancellationPriority(boolean fixEnabled, boolean join, Priority expected) {
+    when(mCacheKeyFactory.getEncodedCacheKey(mImageRequest1, mCallerContext))
+        .thenReturn(mBitmapMemoryCacheKey1);
+    EncodedCacheKeyMultiplexProducer producer =
+        new EncodedCacheKeyMultiplexProducer(mCacheKeyFactory, true, mInputProducer, mConfig);
+    mProducerContext2.setPriority(Priority.HIGH);
+    when(mConfig.getExperiments().getFixEncodedMultiplexLatePriorityDemotion())
+        .thenReturn(
+            () -> {
+              // Force the join after the last consumer was removed, but before demotion.
+              if (join) {
+                producer.produceResults(mock(Consumer.class), mProducerContext2);
+                assertThat(mMultiplexedContext1.getPriority()).isEqualTo(Priority.HIGH);
+              }
+              return fixEnabled;
+            });
+
+    Consumer cancelledConsumer = mock(Consumer.class);
+    producer.produceResults(cancelledConsumer, mProducerContext1);
+    assertThat(mMultiplexedContext1.getPriority()).isEqualTo(Priority.MEDIUM);
+    mProducerContext1.cancel();
+    assertThat(mMultiplexedContext1.getPriority()).isEqualTo(expected);
+    assertThat(mForwardingConsumer2).isNull();
+    verify(cancelledConsumer).onCancellation();
+  }
+
+  @Test
   public void testCancelHighestPriorityLowersPriority() {
     mProducerContext1.setPriority(Priority.MEDIUM);
     mProducerContext2.setPriority(Priority.HIGH);
