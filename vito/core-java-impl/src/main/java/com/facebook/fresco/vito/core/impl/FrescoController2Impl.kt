@@ -161,6 +161,9 @@ open class FrescoController2Impl(
     }
     if (drawable.isFetchSubmitted) {
       drawable.imagePerfListener.onDrawableReconfigured(drawable)
+      if (config.fixReleaseOfReplacedLoadingRequest()) {
+        drawable.notifyPendingReleaseOfLoadingRequest()
+      }
     }
     // We didn't -> Reset everything
     drawable.close()

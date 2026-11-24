@@ -255,6 +255,20 @@ class FrescoDrawable2Impl(
     close()
   }
 
+  /**
+   * Reports the release that the pending delayed release would have reported, when the current
+   * request has no image yet. Call it only right before [close], when a fetch replaces the current
+   * request (another request, or the same request with [forceReloadIfImageAlreadySet]) while its
+   * delayed release is pending: [close] cancels the delayed release, and with the old release
+   * callbacks it reports nothing. This method leaves the delayed release posted, so without that
+   * [close] the delayed release would report the release a second time.
+   */
+  fun notifyPendingReleaseOfLoadingRequest() {
+    if (!useNewReleaseCallbacks && delayedReleasePending && fetchSubmitted && !hasImage()) {
+      drawableDataSubscriber?.onRelease(this)
+    }
+  }
+
   override fun cancelReleaseNextFrame() {
     deferredReleaser.cancelDeferredRelease(this)
   }

@@ -154,6 +154,15 @@ interface FrescoVitoConfig {
   fun fixResetPlaceholderOnZeroFade(): Boolean = false
 
   /**
+   * With the old release callbacks, reports the release of a request that has no image yet when a
+   * fetch replaces it (another request, or the same request with
+   * [FrescoDrawableInterface.forceReloadIfImageAlreadySet]) while its delayed release is pending.
+   * Without it, the replacement cancels that release and the replaced request's listeners never get
+   * an end event.
+   */
+  fun fixReleaseOfReplacedLoadingRequest(): Boolean = false
+
+  /**
    * Starts a Compose painter's fetch when the painter is created instead of when it is remembered.
    */
   fun fetchInVitoPainterInit(): Boolean = false
