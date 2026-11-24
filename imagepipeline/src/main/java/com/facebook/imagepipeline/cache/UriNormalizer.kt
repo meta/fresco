@@ -10,7 +10,7 @@ package com.facebook.imagepipeline.cache
 import android.net.Uri
 
 /** Normalizes a [Uri] for cache key generation. */
-interface UriNormalizer {
+fun interface UriNormalizer {
   fun normalize(uri: Uri, callerContext: Any?): NormalizedUri
 }
 
