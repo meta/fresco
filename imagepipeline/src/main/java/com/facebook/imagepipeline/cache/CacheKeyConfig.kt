@@ -41,7 +41,7 @@ data class CacheKeyConfig(
 )
 
 /** Optional postprocessor key that includes all output-affecting parameters. */
-interface FullPostprocessorCacheKeyProvider {
+fun interface FullPostprocessorCacheKeyProvider {
   /** Must preserve whether the legacy postprocessor key is null. */
   fun getFullPostprocessorCacheKey(): CacheKey?
 }
