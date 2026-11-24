@@ -70,7 +70,8 @@ class LiveEditorOnScreenButtonController(
     private val buttonStyle: ButtonStyle,
     additionalButtonConfig: ButtonConfig? = null,
     private val customOptions: CustomOptions,
-    private val debugDataProviders: List<StringDebugDataProvider> = emptyList(),
+    private val debugDataProviders: List<@JvmSuppressWildcards StringDebugDataProvider> =
+        emptyList(),
     private val showOverlayPermissionMessage: ((Context) -> Unit) = {
       Toast.makeText(
               it,

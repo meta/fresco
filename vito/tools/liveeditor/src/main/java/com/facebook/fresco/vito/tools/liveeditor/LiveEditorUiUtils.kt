@@ -41,7 +41,7 @@ import com.facebook.fresco.vito.source.UriImageSource
 
 class LiveEditorUiUtils(
     var liveEditor: ImageLiveEditor?,
-    var debugDataProviders: List<StringDebugDataProvider>? = null,
+    var debugDataProviders: List<@JvmSuppressWildcards StringDebugDataProvider>? = null,
 ) {
 
   fun createView(

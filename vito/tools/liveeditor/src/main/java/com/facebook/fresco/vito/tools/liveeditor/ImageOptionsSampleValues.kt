@@ -23,7 +23,7 @@ object ImageOptionsSampleValues {
   data class Entry<T>(
       val name: String,
       val data: List<Pair<String, T>>,
-      val updateFunction: (ImageOptions.Builder, T) -> ImageOptions.Builder,
+      val updateFunction: (ImageOptions.Builder, T) -> @JvmSuppressWildcards ImageOptions.Builder,
   )
 
   val roundingOptions: ImageOptionsSampleValues.Entry<RoundingOptions?> = Entry(
