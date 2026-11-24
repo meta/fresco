@@ -203,6 +203,10 @@ public class ProgressiveJpegParser {
 
           case READ_SIZE_SECOND_BYTE:
             final int size = (mLastByteRead << 8) + nextByte;
+            if (size < 2) {
+              mParserState = NOT_A_JPEG;
+              return false;
+            }
             // We need to jump after the end of the segment - skip size-2 next bytes.
             // We might want to skip more data than is available to read, in which case we will
             // consume entire data in inputStream and exit this function before entering another
