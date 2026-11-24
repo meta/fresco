@@ -7,6 +7,7 @@
 
 package com.facebook.imagepipeline.testing;
 
+import com.facebook.common.internal.Preconditions;
 import com.facebook.imagepipeline.memory.MemoryChunk;
 import com.facebook.imagepipeline.memory.NativeMemoryChunk;
 import com.facebook.infer.annotation.Nullsafe;
@@ -38,30 +39,24 @@ public class FakeNativeMemoryChunk extends NativeMemoryChunk {
 
   @Override
   public int getSize() {
-    // NULLSAFE_FIXME[Nullable Dereference]
-    return mBuf.length;
+    return Preconditions.checkNotNull(mBuf).length;
   }
 
   @Override
   public int write(int nativeMemoryOffset, byte[] byteArray, int byteArrayOffset, int count) {
-    // NULLSAFE_FIXME[Nullable Dereference]
-    int numToWrite = Math.min(count, mBuf.length - nativeMemoryOffset);
-    // NULLSAFE_FIXME[Parameter Not Nullable]
+    int numToWrite = Math.min(count, Preconditions.checkNotNull(mBuf).length - nativeMemoryOffset);
     System.arraycopy(byteArray, byteArrayOffset, mBuf, nativeMemoryOffset, numToWrite);
     return numToWrite;
   }
 
   @Override
   public byte read(int nativeMemoryOffset) {
-    // NULLSAFE_FIXME[Nullable Dereference]
-    return mBuf[nativeMemoryOffset];
+    return Preconditions.checkNotNull(mBuf)[nativeMemoryOffset];
   }
 
   @Override
   public int read(int nativeMemoryOffset, byte[] byteArray, int byteArrayOffset, int count) {
-    // NULLSAFE_FIXME[Nullable Dereference]
-    int numToRead = Math.min(count, mBuf.length - nativeMemoryOffset);
-    // NULLSAFE_FIXME[Parameter Not Nullable]
+    int numToRead = Math.min(count, Preconditions.checkNotNull(mBuf).length - nativeMemoryOffset);
     System.arraycopy(mBuf, nativeMemoryOffset, byteArray, byteArrayOffset, numToRead);
     return numToRead;
   }
@@ -69,8 +64,7 @@ public class FakeNativeMemoryChunk extends NativeMemoryChunk {
   @Override
   public void copy(int offset, MemoryChunk other, int otherOffset, int count) {
     FakeNativeMemoryChunk that = (FakeNativeMemoryChunk) other;
-    // NULLSAFE_FIXME[Nullable Dereference]
-    int numToCopy = Math.min(count, mBuf.length - offset);
+    int numToCopy = Math.min(count, Preconditions.checkNotNull(mBuf).length - offset);
     // NULLSAFE_FIXME[Parameter Not Nullable]
     System.arraycopy(mBuf, offset, that.mBuf, otherOffset, numToCopy);
   }
