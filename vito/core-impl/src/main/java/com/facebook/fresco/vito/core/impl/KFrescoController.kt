@@ -56,7 +56,7 @@ class KFrescoController(
     private val vitoImagePipeline: VitoImagePipeline,
     private val uiThreadExecutor: Executor,
     private val lightweightBackgroundThreadExecutor: Executor,
-    private val globalImageRequestListener: VitoImageRequestListener? = null,
+    @Volatile var globalImageRequestListener: VitoImageRequestListener? = null,
     private val imagePerfLoggingListenerSupplier: Supplier<ImagePerfLoggingListener>? = null,
     private val imagePerfListener: VitoImagePerfListener = BaseVitoImagePerfListener(),
     private val drawableFactory: ImageOptionsDrawableFactory? = null,
@@ -100,7 +100,7 @@ class KFrescoController(
         }
       }
 
-  var debugOverlayHandler: DebugOverlayHandler? = null
+  @Volatile var debugOverlayHandler: VitoDebugOverlay? = null
 
   override fun <T> createDrawable(): T where T : Drawable, T : FrescoDrawableInterface =
       createDrawable(null)

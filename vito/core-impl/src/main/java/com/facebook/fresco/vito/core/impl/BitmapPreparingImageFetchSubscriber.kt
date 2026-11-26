@@ -30,7 +30,7 @@ class BitmapPreparingImageFetchSubscriber(
     private val drawable: KFrescoVitoDrawable,
     private val imageToDataModelMapper:
         (Resources, CloseableImage, ImageOptions) -> ImageDataModel?,
-    private val debugOverlayHandler: DebugOverlayHandler? = null,
+    private val debugOverlayHandler: VitoDebugOverlay? = null,
     private val uiThreadExecutor: Executor = Executor { it.run() },
     private val preparationExecutor: Executor? = null,
 ) : DataSubscriber<CloseableReference<CloseableImage>> {

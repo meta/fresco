@@ -22,7 +22,7 @@ class ImageFetchSubscriber(
     private val drawable: KFrescoVitoDrawable,
     private val imageToDataModelMapper:
         (Resources, CloseableImage, ImageOptions) -> ImageDataModel?,
-    private val debugOverlayHandler: DebugOverlayHandler? = null,
+    private val debugOverlayHandler: VitoDebugOverlay? = null,
     private val invalidationExecutor: Executor? = null,
 ) : DataSubscriber<CloseableReference<CloseableImage>> {
   override fun onNewResult(dataSource: DataSource<CloseableReference<CloseableImage>>) {

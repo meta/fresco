@@ -59,8 +59,8 @@ open class FrescoController2Impl(
     private val lightweightBackgroundThreadExecutor: Executor,
     private val uiThreadExecutor: Executor,
     private val imagePipeline: VitoImagePipeline,
-    private val globalImageListener: VitoImageRequestListener?,
-    private val debugOverlayFactory: DebugOverlayFactory2,
+    @Volatile var globalImageListener: VitoImageRequestListener?,
+    @Volatile var debugOverlayFactory: DebugOverlayFactory2,
     private val imagePerfListenerSupplier: Supplier<ImagePerfLoggingListener>?,
     private val vitoImagePerfListener: VitoImagePerfListener,
 ) : DrawableDataSubscriber, FrescoController2 {

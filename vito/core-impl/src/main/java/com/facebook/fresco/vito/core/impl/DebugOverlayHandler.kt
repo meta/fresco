@@ -37,13 +37,13 @@ class DebugOverlayHandler(
       add(imageOriginSubcategoryProvider)
       add(hdrGainmapProvider)
     },
-) {
+) : VitoDebugOverlay {
   constructor(
       isEnabled: Supplier<Boolean>,
       debugDataProviders: List<DebugDataProvider>,
   ) : this(isEnabled, false, debugDataProviders) {}
 
-  fun update(drawable: KFrescoVitoDrawable) {
+  override fun update(drawable: KFrescoVitoDrawable) {
     if (!isEnabled.get()) {
       return
     }
