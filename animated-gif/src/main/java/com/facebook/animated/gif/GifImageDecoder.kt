@@ -7,6 +7,7 @@
 
 package com.facebook.animated.gif
 
+import com.facebook.common.internal.DoNotStrip
 import com.facebook.common.logging.FLog
 import com.facebook.imagepipeline.animated.factory.AnimatedImageDecoderBase
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
@@ -16,7 +17,10 @@ import com.facebook.imagepipeline.image.CloseableImage
 import com.facebook.imagepipeline.image.EncodedImage
 import com.facebook.imagepipeline.image.QualityInfo
 
-class GifImageDecoder(
+@DoNotStrip
+class GifImageDecoder
+@DoNotStrip
+constructor(
     platformBitmapFactory: PlatformBitmapFactory,
     isNewRenderImplementation: Boolean,
     downscaleFrameToDrawableDimensions: Boolean,
@@ -39,6 +43,7 @@ class GifImageDecoder(
    * @param options decode options specifying how the image should be decoded
    * @return a CloseableImage
    */
+  @DoNotStrip
   override fun decode(
       encodedImage: EncodedImage,
       length: Int,

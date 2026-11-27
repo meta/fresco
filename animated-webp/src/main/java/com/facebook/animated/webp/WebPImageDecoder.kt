@@ -7,6 +7,7 @@
 
 package com.facebook.animated.webp
 
+import com.facebook.common.internal.DoNotStrip
 import com.facebook.imagepipeline.animated.factory.AnimatedImageDecoderBase
 import com.facebook.imagepipeline.bitmaps.PlatformBitmapFactory
 import com.facebook.imagepipeline.common.ImageDecodeOptions
@@ -15,7 +16,10 @@ import com.facebook.imagepipeline.image.CloseableImage
 import com.facebook.imagepipeline.image.EncodedImage
 import com.facebook.imagepipeline.image.QualityInfo
 
-class WebPImageDecoder(
+@DoNotStrip
+class WebPImageDecoder
+@DoNotStrip
+constructor(
     platformBitmapFactory: PlatformBitmapFactory,
     isNewRenderImplementation: Boolean,
     downscaleFrameToDrawableDimensions: Boolean,
@@ -38,6 +42,7 @@ class WebPImageDecoder(
    * @param options decode options specifying how the image should be decoded
    * @return a CloseableImage
    */
+  @DoNotStrip
   override fun decode(
       encodedImage: EncodedImage,
       length: Int,
